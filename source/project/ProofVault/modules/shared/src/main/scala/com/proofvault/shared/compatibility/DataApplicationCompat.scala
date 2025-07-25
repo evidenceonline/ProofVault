@@ -34,6 +34,19 @@ case class L1NodeContext[F[_]](getLastSnapshot: SnapshotInfo) {
 
 case class SnapshotInfo(ordinal: Long)
 
+object DataApplicationCompat {
+  // Export all types for easy importing
+  type DataUpdate = com.proofvault.shared.compatibility.DataUpdate
+  type DataState[S <: DataState[S, U], U <: DataUpdate] = com.proofvault.shared.compatibility.DataState[S, U]
+  type DataCalculatedState = com.proofvault.shared.compatibility.DataCalculatedState  
+  type OnChainState = com.proofvault.shared.compatibility.OnChainState
+  type DataApplication[U <: DataUpdate, S <: DataState[S, U], CS <: DataCalculatedState, OS <: OnChainState] = com.proofvault.shared.compatibility.DataApplication[U, S, CS, OS]
+  type DataApplicationValidationError = com.proofvault.shared.compatibility.DataApplicationValidationError
+  type L1NodeContext[F[_]] = com.proofvault.shared.compatibility.L1NodeContext[F]
+  
+  val DataApplicationValidationError = com.proofvault.shared.compatibility.DataApplicationValidationError
+}
+
 // Base data application service
 abstract class BaseDataApplicationL1Service[F[_]] {
   def validateUpdate(update: DataUpdate, state: DataOnChainState): IO[DataApplicationValidationError, Unit]

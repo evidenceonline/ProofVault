@@ -1,6 +1,6 @@
 package com.proofvault.shared.types
 
-import cats.effect.Async
+import cats.effect.{Async, IO}
 import cats.implicits._
 import derevo.cats.{eqv, show}
 import derevo.circe.magnolia.{decoder, encoder}
