@@ -29,7 +29,7 @@ lazy val shared = (project in file("modules/shared"))
       CompilerPlugin.kindProjector,
       CompilerPlugin.betterMonadicFor,
       CompilerPlugin.semanticDB,
-      Libraries.tessellationNodeShared,
+      Libraries.tessellationNodeShared.exclude("pl.abankowski", "http4s-request-signer_2.13").exclude("pl.abankowski", "http-request-signer-core_2.13"),
       Libraries.derevoCore,
       Libraries.derevoCats,
       Libraries.derevoCirce
@@ -52,7 +52,7 @@ lazy val currencyL1 = (project in file("modules/l1"))
       CompilerPlugin.kindProjector,
       CompilerPlugin.betterMonadicFor,
       CompilerPlugin.semanticDB,
-      Libraries.tessellationCurrencyL1,
+      Libraries.tessellationCurrencyL1.exclude("pl.abankowski", "http4s-request-signer_2.13").exclude("pl.abankowski", "http-request-signer-core_2.13"),
       Libraries.scalaTest
     )
   )
@@ -76,7 +76,7 @@ lazy val currencyL0 = (project in file("modules/l0"))
       Libraries.declineRefined,
       Libraries.declineCore,
       Libraries.declineEffect,
-      Libraries.tessellationCurrencyL0,
+      Libraries.tessellationCurrencyL0.exclude("pl.abankowski", "http4s-request-signer_2.13").exclude("pl.abankowski", "http-request-signer-core_2.13"),
       Libraries.requests
     )
   )
@@ -97,6 +97,6 @@ lazy val dataL1 = (project in file("modules/data_l1"))
       CompilerPlugin.kindProjector,
       CompilerPlugin.betterMonadicFor,
       CompilerPlugin.semanticDB,
-      Libraries.tessellationCurrencyL1
+      Libraries.tessellationCurrencyL1.exclude("pl.abankowski", "http4s-request-signer_2.13").exclude("pl.abankowski", "http-request-signer-core_2.13")
     )
   )
