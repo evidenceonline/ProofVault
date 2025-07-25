@@ -49,11 +49,21 @@ jobs:
         shell: bash
         run: |
           echo "Loading GitHub token into euclid.json..."
-          echo "Token exists: ${{ secrets.TOKEN != '' }}"
+          if [ -z "${{ secrets.TOKEN }}" ]; then
+            echo "ERROR: TOKEN secret is not set or is empty!"
+            echo "Please add a GitHub secret named 'TOKEN' in your repository settings"
+            exit 1
+          fi
+          echo "Token found, updating euclid.json..."
           contents="$(jq --arg GITHUB_TOKEN "${{ secrets.TOKEN }}" '.github_token = $GITHUB_TOKEN' euclid.json)"
           echo -E "${contents}" > euclid.json
-          echo "Verifying token was set (showing first 10 chars):"
-          jq -r '.github_token' euclid.json | cut -c1-10
+          echo "Verifying token was set (showing length):"
+          token_length=$(jq -r '.github_token | length' euclid.json)
+          echo "Token length: $token_length characters"
+          if [ "$token_length" -lt 10 ]; then
+            echo "ERROR: Token appears to be too short or not set properly"
+            exit 1
+          fi
           
       - name: Run steps
         shell: bash
@@ -86,12 +96,17 @@ jobs:
             echo "Running in GitHub Actions - checking for existing build"
             # Clean up any existing builds to avoid tag conflicts
             docker image prune -f || true
+            # Remove any existing images with our tag
+            docker rmi $(docker images -q metagraph-base-image:2.8.1) 2>/dev/null || true
+            docker rmi $(docker images -q metagraph-ubuntu:2.8.1) 2>/dev/null || true
           fi
           
-          scripts/hydra build
+          # Export the path for hydra script
+          cd scripts/
+          ./hydra build
           
-          scripts/hydra start-genesis
+          ./hydra start-genesis
           
-          scripts/hydra stop
+          ./hydra stop
           
-          scripts/hydra destroy
+          ./hydra destroy
