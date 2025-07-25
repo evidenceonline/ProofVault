@@ -29,10 +29,21 @@ jobs:
       - name: Verify Docker installation
         run: docker --version
 
-      - name: Install jq
+      - name: Install dependencies (jq, yq, ansible)
         shell: bash
         run: |
+          # Install jq
           sudo apt install -y jq
+          
+          # Install yq
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          
+          # Install Ansible
+          sudo apt update
+          sudo apt install -y software-properties-common
+          sudo add-apt-repository --yes --update ppa:ansible/ansible
+          sudo apt install -y ansible
 
       - name: Load config file
         shell: bash
@@ -46,6 +57,8 @@ jobs:
           echo "Installing CARGO"
           curl https://sh.rustup.rs -sSf | sh -s -- -y 
           echo "Cargo Installed"
+          
+          source $HOME/.cargo/env
 
           echo "Installing ARGC"
           cargo install argc
@@ -61,11 +74,12 @@ jobs:
           cs install giter8
           echo "Gitter Installed"
           
-          scripts/hydra install
+          # Skip install since project is already set up
+          # scripts/hydra install
           
           scripts/hydra build
           
-          scripts/hydra start_genesis
+          scripts/hydra start-genesis
           
           scripts/hydra stop
           
