@@ -47,19 +47,38 @@ jobs:
 
       - name: Load config file
         shell: bash
+        env:
+          GITHUB_PAT: ${{ secrets.TOKEN }}
         run: |
           echo "Loading GitHub token into euclid.json..."
-          if [ -z "${{ secrets.TOKEN }}" ]; then
-            echo "ERROR: TOKEN secret is not set or is empty!"
-            echo "Please add a GitHub secret named 'TOKEN' in your repository settings"
-            exit 1
+          
+          # First check if we can access the default GITHUB_TOKEN
+          if [ -n "${{ secrets.GITHUB_TOKEN }}" ]; then
+            echo "Default GITHUB_TOKEN is accessible"
           fi
-          echo "Token found, updating euclid.json..."
-          contents="$(jq --arg GITHUB_TOKEN "${{ secrets.TOKEN }}" '.github_token = $GITHUB_TOKEN' euclid.json)"
+          
+          # Check if TOKEN secret is available via env variable
+          if [ -z "$GITHUB_PAT" ]; then
+            echo "ERROR: TOKEN secret is not accessible!"
+            echo ""
+            echo "Please ensure you have added a repository secret (not variable) named 'TOKEN'"
+            echo "Go to: Settings → Secrets and variables → Actions → Secrets tab → New repository secret"
+            echo ""
+            echo "For now, trying with the default GITHUB_TOKEN..."
+            # Use the default GITHUB_TOKEN as fallback
+            GITHUB_PAT="${{ secrets.GITHUB_TOKEN }}"
+          else
+            echo "TOKEN secret found via environment variable"
+          fi
+          
+          echo "Updating euclid.json with token..."
+          contents="$(jq --arg GITHUB_TOKEN "$GITHUB_PAT" '.github_token = $GITHUB_TOKEN' euclid.json)"
           echo -E "${contents}" > euclid.json
+          
           echo "Verifying token was set (showing length):"
           token_length=$(jq -r '.github_token | length' euclid.json)
           echo "Token length: $token_length characters"
+          
           if [ "$token_length" -lt 10 ]; then
             echo "ERROR: Token appears to be too short or not set properly"
             exit 1
