@@ -53,6 +53,30 @@ Individual components can be built/tested separately:
 - `npm run dev:frontend` / `npm run build:frontend` / `npm run test:frontend`  
 - `npm run build:extension` / `npm run test:extension`
 
+### Database Operations
+```bash
+npm run setup:db          # Initial database setup
+npm run migrate:db        # Run migrations
+npm run seed:db           # Seed with test data
+npm run monitor:db        # Monitor database health
+npm run backup:db         # Create database backup
+```
+
+### Single Test Execution
+```bash
+# Backend tests
+cd backend-api && npm test -- --testNamePattern="specific test"
+
+# Frontend tests  
+cd frontend && npm test -- --testNamePattern="specific test"
+
+# Extension tests
+cd chrome-extension && npm test -- --testNamePattern="specific test"
+
+# Run specific test file
+cd backend-api && npm test tests/services/pdf.test.js
+```
+
 ## Architecture Overview
 
 ### Euclid Framework Structure
@@ -70,14 +94,53 @@ Individual components can be built/tested separately:
 - **`backend-api/`** - Node.js API server with metagraph integration
 - **`frontend/`** - React verification interface
 - **`database/`** - PostgreSQL schemas and setup
-- **`metagraph/`** - Custom Constellation Network L0/L1 implementation
+- **`source/project/ProofVault/`** - Custom Constellation Network L0/L1/DataL1 implementation
 
 ### Layer Architecture
 The system operates on multiple blockchain layers:
 - **Global L0** - Constellation Network main chain
 - **Metagraph L0** - Custom application chain  
 - **Currency L1** - Token/currency operations
-- **Data L1** - Custom data transactions
+- **Data L1** - Custom data transactions for PDF evidence
+
+### ProofVault Metagraph Implementation
+Located in `source/project/ProofVault/modules/`:
+
+#### Shared Module (`modules/shared/`)
+- **PDFTypes.scala** - Core data structures for PDF records, metadata, and registry state
+- **TransactionEncoding.scala** - Serialization/deserialization for blockchain transactions
+- **PDFDataTypes.scala** - Additional type definitions
+
+#### L0 Module (`modules/l0/`)
+- **Main.scala** - Currency L0 entry point
+- **modules/** - Custom validators and consensus logic
+
+#### L1 Module (`modules/l1/`)  
+- **Main.scala** - Currency L1 entry point
+
+#### Data L1 Module (`modules/data_l1/`)
+- **Main.scala** - Data L1 for PDF evidence transactions
+
+### Key Data Structures
+```scala
+// Core PDF record structure
+case class PDFRecord(
+  hash: String,              // SHA-256 hash of PDF content
+  url: String,               // Storage URL
+  title: String,             // Document title
+  captureTimestamp: Long,    // Capture timestamp
+  submitterAddress: Address, // Submitter address
+  metadata: PDFMetadata,     // Additional metadata
+  registrationId: String     // Unique identifier
+)
+
+// Registry state for managing PDF records
+case class PDFRegistryState(
+  registeredPDFs: Map[String, PDFRecord],
+  totalRegistrations: Long,
+  lastUpdated: Long
+)
+```
 
 ## Configuration
 
@@ -90,6 +153,15 @@ The system operates on multiple blockchain layers:
 - Default: IntegrationNet for development
 - Production: MainNet (requires registered peerIDs on seedlist)
 - Configure in `euclid.json` under `deploy.network.name`
+
+### Tessellation Dependencies
+The project uses Tessellation framework version 2.8.1. Key dependencies in `Dependencies.scala`:
+- `tessellation-node-shared`
+- `tessellation-currency-l0`  
+- `tessellation-currency-l1`
+- `tessellation-currency-data-application`
+
+**Important**: When updating Tessellation versions, ensure all required modules are published to local Maven repository during Docker build.
 
 ## Development Workflow
 
@@ -111,6 +183,11 @@ The system operates on multiple blockchain layers:
 - Check cluster info: `http://localhost:9000/cluster/info`
 - Grafana monitoring: Enable in `euclid.json`, access at `http://localhost:3000`
 
+### Chrome Extension Development
+1. Build extension: `npm run build:extension`
+2. Load in Chrome: `chrome://extensions/` → "Load unpacked" → select `chrome-extension/` directory
+3. Test with: `npm run test:extension`
+
 ## Important Notes
 
 - **Dependency**: Requires Docker (8GB+ RAM), Rust/Cargo, Ansible, jq, yq
@@ -126,3 +203,15 @@ The system operates on multiple blockchain layers:
 - `scripts/hydra` is the main orchestration tool - all operations flow through it
 - Ansible playbooks handle both local Docker operations and remote deployment
 - Custom metagraph code should be placed in `source/project/` after installation
+
+## Troubleshooting
+
+### Common Issues
+1. **Tessellation dependency errors**: Ensure all required modules are published during Docker build
+2. **GitHub token issues**: Set valid token in `euclid.json` 
+3. **Port conflicts**: Check that ports 9000-9420 and 3000-3001 are available
+4. **Docker memory**: Ensure Docker has at least 8GB RAM allocated
+
+### Build Failures
+- If metagraph build fails, check that Tessellation dependencies match between `Dependencies.scala` and `euclid.json`
+- Missing `tessellation-currency-data-application` usually indicates incomplete dependency publishing
