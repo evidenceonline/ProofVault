@@ -111,15 +111,7 @@ jobs:
           cd scripts/
           
           # Skip install since project already has framework
-          # The build script checks for project directory based on project_name from euclid.json
-          # Our project files are in 'project' but the script expects 'ProofVault'
-          echo "Creating expected project directory structure"
-          cd ../source
-          if [ ! -d "ProofVault" ] && [ -d "project" ]; then
-            echo "Creating symlink from project to ProofVault"
-            ln -s project ProofVault
-          fi
-          cd ../scripts
+          # Project is already in the correct structure: source/project/ProofVault
           
           # Check if we're in GitHub Actions CI environment
           if [ -n "$GITHUB_ACTIONS" ]; then
