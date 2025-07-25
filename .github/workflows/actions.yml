@@ -49,6 +49,7 @@ jobs:
         shell: bash
         run: |
           echo "Loading GitHub token into euclid.json..."
+          echo "Token exists: ${{ secrets.TOKEN != '' }}"
           contents="$(jq --arg GITHUB_TOKEN "${{ secrets.TOKEN }}" '.github_token = $GITHUB_TOKEN' euclid.json)"
           echo -E "${contents}" > euclid.json
           echo "Verifying token was set (showing first 10 chars):"
