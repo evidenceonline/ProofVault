@@ -4,6 +4,7 @@ import sbt.*
 ThisBuild / organization := "com.proofvault"
 ThisBuild / scalaVersion := "2.13.10"
 ThisBuild / evictionErrorLevel := Level.Warn
+ThisBuild / resolvers += Resolver.mavenLocal
 
 ThisBuild / assemblyMergeStrategy := {
   case "logback.xml" => MergeStrategy.first
@@ -23,6 +24,7 @@ lazy val shared = (project in file("modules/shared"))
   .settings(
     name := "proofvault-shared",
     scalacOptions ++= List("-Ymacro-annotations"),
+    resolvers += Resolver.mavenLocal,
     libraryDependencies ++= Seq(
       CompilerPlugin.kindProjector,
       CompilerPlugin.betterMonadicFor,
