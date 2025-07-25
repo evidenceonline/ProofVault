@@ -107,8 +107,11 @@ jobs:
           cs install giter8
           echo "Gitter Installed"
           
-          # Skip install since project is already set up
-          # scripts/hydra install
+          # Change to scripts directory for all hydra operations
+          cd scripts/
+          
+          # Run install to set up the framework
+          ./hydra install
           
           # Check if we're in GitHub Actions CI environment
           if [ -n "$GITHUB_ACTIONS" ]; then
@@ -120,12 +123,13 @@ jobs:
             docker rmi $(docker images -q metagraph-ubuntu:2.8.1) 2>/dev/null || true
           fi
           
-          # Export the path for hydra script
-          cd scripts/
+          # Build the project
           ./hydra build
           
+          # Start and test
           ./hydra start-genesis
           
+          # Stop and cleanup
           ./hydra stop
           
           ./hydra destroy
