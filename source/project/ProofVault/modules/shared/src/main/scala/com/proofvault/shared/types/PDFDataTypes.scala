@@ -1,6 +1,6 @@
 package com.proofvault.shared.types
 
-import cats.effect.{Async, IO}
+import cats.effect.Async
 import cats.implicits._
 import derevo.cats.{eqv, show}
 import derevo.circe.magnolia.{decoder, encoder}
@@ -233,6 +233,3 @@ object PDFDataApplication extends DataApplication[
     else
       IO.raiseError(DataApplicationValidationError("Invalid metadata"))
 }
-
-// Validation error case class
-case class DataApplicationValidationError(message: String) extends Exception(message)
