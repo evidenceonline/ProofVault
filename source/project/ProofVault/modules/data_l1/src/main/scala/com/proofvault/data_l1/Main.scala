@@ -4,7 +4,7 @@ import java.util.UUID
 import cats.effect.{IO, Resource}
 import cats.implicits._
 import org.tessellation.BuildInfo
-import org.tessellation.currency.dataApplication._
+import com.proofvault.shared.compatibility.DataApplicationCompat._
 import org.tessellation.currency.l1.CurrencyL1App
 import org.tessellation.dag.l1.config.types.AppConfig
 import org.tessellation.schema.cluster.ClusterId

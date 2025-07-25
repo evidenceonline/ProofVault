@@ -18,7 +18,6 @@ object Dependencies {
     val tessellationNodeShared = tessellation("node-shared")
     val tessellationCurrencyL0 = tessellation("currency-l0")
     val tessellationCurrencyL1 = tessellation("currency-l1")
-    val tessellationCurrencyDataApplication = tessellation("currency-data-application")
     val requests = "com.lihaoyi" %% "requests" % "0.8.0"
     val declineCore = decline()
     val declineEffect = decline("effect")

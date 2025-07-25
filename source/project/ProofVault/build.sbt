@@ -28,7 +28,6 @@ lazy val shared = (project in file("modules/shared"))
       CompilerPlugin.betterMonadicFor,
       CompilerPlugin.semanticDB,
       Libraries.tessellationNodeShared,
-      Libraries.tessellationCurrencyDataApplication,
       Libraries.derevoCore,
       Libraries.derevoCats,
       Libraries.derevoCirce
@@ -99,7 +98,6 @@ lazy val dataL1 = (project in file("modules/data_l1"))
       CompilerPlugin.kindProjector,
       CompilerPlugin.betterMonadicFor,
       CompilerPlugin.semanticDB,
-      Libraries.tessellationCurrencyL1,
-      Libraries.tessellationCurrencyDataApplication
+      Libraries.tessellationCurrencyL1
     )
   )

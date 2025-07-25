@@ -32,7 +32,7 @@ RUN git clone https://github.com/Constellation-Labs/tessellation.git && \
     
 RUN cd tessellation && \
     if [ "$SHOULD_USE_UPDATED_MODULES" = "true" ]; then \
-        sbt kernel/publishM2 shared/publishM2 keytool/publishM2 nodeShared/publishM2 dagL1/publishM2 currencyL0/publishM2 currencyL1/publishM2 currencyDataApplication/publishM2; \
+        sbt kernel/publishM2 shared/publishM2 keytool/publishM2 nodeShared/publishM2 dagL1/publishM2 currencyL0/publishM2 currencyL1/publishM2; \
     else \
         sbt kernel/publishM2 shared/publishM2 keytool/publishM2 sdk/publishM2 dagL1/publishM2 currencyL0/publishM2 currencyL1/publishM2; \
     fi

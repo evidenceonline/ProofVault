@@ -9,11 +9,10 @@ import eu.timepit.refined.auto._
 import eu.timepit.refined.types.numeric.NonNegLong
 import io.circe.refined._
 import io.circe.{Decoder, Encoder}
-import org.tessellation.currency.dataApplication._
-import org.tessellation.currency.dataApplication.dataApplication._
+import com.proofvault.shared.compatibility.DataApplicationCompat._
+import org.http4s.HttpRoutes
 import org.tessellation.schema.SnapshotOrdinal
 import org.tessellation.schema.address.Address
-import org.tessellation.security.SecurityProvider
 import org.tessellation.security.hash.Hash
 import org.tessellation.security.hex.Hex
 import org.tessellation.security.signature.Signed
@@ -112,7 +111,7 @@ object PDFDataApplication extends DataApplication[
   override def validateUpdate(
     state: DataState[PDFState, PDFUpdate],
     update: PDFUpdate
-  )(implicit context: L1NodeContext[SecurityProvider[_]]): IO[DataApplicationValidationError, Unit] = 
+  )(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, Unit] = 
     update match {
       case RegisterPDF(hash, url, title, timestamp, submitter, _) =>
         for {
@@ -126,7 +125,7 @@ object PDFDataApplication extends DataApplication[
   override def validateData(
     state: DataState[PDFState, PDFUpdate],
     updates: NonEmptyList[Signed[PDFUpdate]]
-  )(implicit context: L1NodeContext[SecurityProvider[_]]): IO[DataApplicationValidationError, Unit] = 
+  )(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, Unit] = 
     updates.traverse_ { signedUpdate =>
       validateUpdate(state, signedUpdate.value)
     }
@@ -134,7 +133,7 @@ object PDFDataApplication extends DataApplication[
   override def combine(
     state: DataState[PDFState, PDFUpdate],
     updates: List[Signed[PDFUpdate]]
-  )(implicit context: L1NodeContext[SecurityProvider[_]]): IO[DataApplicationValidationError, PDFState] = 
+  )(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, PDFState] = 
     IO.pure {
       updates.foldLeft(state.asInstanceOf[PDFState]) { (acc, signedUpdate) =>
         acc.applyUpdate(signedUpdate.value)
@@ -143,12 +142,12 @@ object PDFDataApplication extends DataApplication[
     
   override def getCalculatedState(
     state: DataState[PDFState, PDFUpdate]
-  )(implicit context: L1NodeContext[SecurityProvider[_]]): IO[DataApplicationValidationError, PDFCalculatedState] = 
+  )(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, PDFCalculatedState] = 
     IO.pure(PDFCalculatedState.from(state.asInstanceOf[PDFState], context.getLastSnapshot.ordinal))
     
   override def hashCalculatedState(
     state: DataCalculatedState
-  )(implicit context: L1NodeContext[SecurityProvider[_]]): IO[DataApplicationValidationError, Hash] = 
+  )(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, Hash] = 
     IO.pure(Hash.empty) // Implement proper hashing
     
   override def serializeState(
@@ -173,7 +172,7 @@ object PDFDataApplication extends DataApplication[
     
   override def getOnChainState(
     state: DataState[PDFState, PDFUpdate]
-  )(implicit context: L1NodeContext[SecurityProvider[_]]): IO[DataApplicationValidationError, PDFOnChainState] = {
+  )(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, PDFOnChainState] = {
     val pdfState = state.asInstanceOf[PDFState]
     val lastHash = pdfState.registeredPDFs.values.toList
       .sortBy(_.captureTimestamp)
@@ -206,7 +205,7 @@ object PDFDataApplication extends DataApplication[
   override def genesis: DataState[PDFState, PDFUpdate] = 
     PDFState(Map.empty)
     
-  override def routes(implicit context: L1NodeContext[Async]): HttpRoutes[F] = 
+  override def routes[F[_]](implicit context: L1NodeContext[F]): HttpRoutes[F] = 
     HttpRoutes.empty[F] // Add custom API routes if needed
     
   // Validation helpers
