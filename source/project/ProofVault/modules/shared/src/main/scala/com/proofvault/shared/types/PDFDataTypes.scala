@@ -14,7 +14,6 @@ import org.http4s.HttpRoutes
 import org.tessellation.schema.SnapshotOrdinal
 import org.tessellation.schema.address.Address
 import org.tessellation.security.hash.Hash
-import org.tessellation.security.hex.Hex
 import org.tessellation.security.signature.Signed
 
 import java.util.UUID
@@ -113,7 +112,7 @@ object PDFDataApplication extends DataApplication[
     update: PDFUpdate
   )(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, Unit] = 
     update match {
-      case RegisterPDF(hash, url, title, timestamp, submitter, _) =>
+      case RegisterPDF(hash, url, title, timestamp, _, _) =>
         for {
           _ <- validateHashFormat(hash)
           _ <- validateDuplicate(state.asInstanceOf[PDFState], hash)
