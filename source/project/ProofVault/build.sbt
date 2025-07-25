@@ -47,7 +47,6 @@ lazy val currencyL1 = (project in file("modules/l1"))
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
     buildInfoPackage := "com.proofvault.l1",
     resolvers += Resolver.mavenLocal,
-    resolvers += Resolver.githubPackages("abankowski", "http-request-signer"),
     Defaults.itSettings,
     libraryDependencies ++= Seq(
       CompilerPlugin.kindProjector,
@@ -69,7 +68,6 @@ lazy val currencyL0 = (project in file("modules/l0"))
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
     buildInfoPackage := "com.proofvault.l0",
     resolvers += Resolver.mavenLocal,
-    resolvers += Resolver.githubPackages("abankowski", "http-request-signer"),
     Defaults.itSettings,
     libraryDependencies ++= Seq(
       CompilerPlugin.kindProjector,
@@ -94,7 +92,6 @@ lazy val dataL1 = (project in file("modules/data_l1"))
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
     buildInfoPackage := "com.proofvault.data_l1",
     resolvers += Resolver.mavenLocal,
-    resolvers += Resolver.githubPackages("abankowski", "http-request-signer"),
     Defaults.itSettings,
     libraryDependencies ++= Seq(
       CompilerPlugin.kindProjector,
