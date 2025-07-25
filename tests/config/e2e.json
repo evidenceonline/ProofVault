@@ -1,0 +1,240 @@
+{
+  "name": "ProofVault E2E Test Configuration",
+  "version": "1.0.0",
+  "environment": "test",
+  
+  "timeouts": {
+    "default": 300000,
+    "api": 30000,
+    "page": 60000,
+    "blockchain": 120000,
+    "performance": 600000
+  },
+  
+  "retries": {
+    "default": 3,
+    "flaky": 5,
+    "performance": 1
+  },
+  
+  "urls": {
+    "apiBaseUrl": "http://localhost:3001",
+    "frontendUrl": "http://localhost:3000",
+    "metagraphUrl": "http://localhost:9000",
+    "wsUrl": "ws://localhost:3001"
+  },
+  
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "proofvault_test",
+    "user": "postgres",
+    "password": "password",
+    "ssl": false
+  },
+  
+  "browsers": {
+    "chrome": {
+      "enabled": true,
+      "headless": false,
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "args": [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-web-security",
+        "--disable-features=VizDisplayCompositor"
+      ]
+    },
+    "firefox": {
+      "enabled": false,
+      "headless": false,
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      }
+    }
+  },
+  
+  "testing": {
+    "parallel": false,
+    "maxWorkers": 4,
+    "bail": false,
+    "verbose": true,
+    "collectCoverage": true,
+    "screenshotOnFailure": true,
+    "recordVideo": false,
+    "slowTestThreshold": 30000
+  },
+  
+  "performance": {
+    "concurrencyLevels": [1, 5, 10, 25, 50, 100],
+    "loadDuration": 300000,
+    "rampUpTime": 60000,
+    "thresholds": {
+      "responseTime": {
+        "p95": 2000,
+        "p99": 5000
+      },
+      "throughput": {
+        "min": 10
+      },
+      "errorRate": {
+        "max": 1
+      }
+    }
+  },
+  
+  "api": {
+    "authentication": {
+      "enabled": true,
+      "type": "jwt",
+      "testUser": {
+        "username": "testuser",
+        "password": "testpassword"
+      }
+    },
+    "rateLimit": {
+      "enabled": true,
+      "requests": 100,
+      "window": 60000
+    }
+  },
+  
+  "blockchain": {
+    "network": "testnet",
+    "confirmationWaitTime": 30000,
+    "maxConfirmationWait": 300000,
+    "gasLimit": 1000000,
+    "testWallets": [
+      {
+        "address": "DAGtest1234567890abcdef",
+        "privateKey": "test-private-key-1",
+        "publicKey": "test-public-key-1"
+      },
+      {
+        "address": "DAGtest0987654321fedcba",
+        "privateKey": "test-private-key-2", 
+        "publicKey": "test-public-key-2"
+      }
+    ]
+  },
+  
+  "testData": {
+    "generateOnSetup": true,
+    "cleanupOnTeardown": true,
+    "baseDir": "./e2e/data",
+    "types": [
+      "pdfs",
+      "images", 
+      "documents",
+      "users",
+      "blockchain"
+    ]
+  },
+  
+  "reporting": {
+    "formats": ["json", "html", "junit", "coverage"],
+    "outputDir": "./e2e/reports",
+    "detailedErrors": true,
+    "includeScreenshots": true,
+    "includeLogs": true,
+    "emailSummary": {
+      "enabled": false,
+      "recipients": ["team@proofvault.com"],
+      "onFailureOnly": true
+    }
+  },
+  
+  "monitoring": {
+    "enabled": true,
+    "metrics": [
+      "responseTime",
+      "memoryUsage", 
+      "cpuUsage",
+      "networkLatency",
+      "errorRate"
+    ],
+    "samplingInterval": 5000,
+    "alertThresholds": {
+      "responseTime": 10000,
+      "memoryUsage": 512,
+      "errorRate": 5
+    }
+  },
+  
+  "logging": {
+    "level": "info",
+    "file": "./e2e/logs/test.log",
+    "console": true,
+    "includeTimestamps": true,
+    "includeStackTraces": true
+  },
+  
+  "hooks": {
+    "beforeAll": [],
+    "afterAll": [],
+    "beforeEach": [],
+    "afterEach": [],
+    "onFailure": [
+      "takeScreenshot",
+      "saveLogs",
+      "captureNetworkRequests"
+    ]
+  },
+  
+  "features": {
+    "healthChecks": {
+      "enabled": true,
+      "services": ["api", "frontend", "metagraph", "database"]
+    },
+    "dataConsistency": {
+      "enabled": true,
+      "checkInterval": 30000
+    },
+    "networkResilience": {
+      "enabled": true,
+      "simulateFailures": true
+    },
+    "crossBrowserTesting": {
+      "enabled": false,
+      "browsers": ["chrome", "firefox", "safari", "edge"]
+    }
+  },
+  
+  "ci": {
+    "enabled": false,
+    "provider": "github",
+    "parallel": true,
+    "maxWorkers": 2,
+    "retries": 2,
+    "timeout": 1800000,
+    "failFast": true,
+    "artifacts": {
+      "screenshots": true,
+      "videos": false,
+      "logs": true,
+      "reports": true
+    }
+  },
+  
+  "security": {
+    "skipCertificateVerification": true,
+    "allowInsecureConnections": true,
+    "testApiKeys": {
+      "extension": "test-extension-key-12345",
+      "internal": "test-internal-key-67890",
+      "webhook": "test-webhook-secret-abcdef"
+    }
+  },
+  
+  "extensions": {
+    "proofvault": {
+      "path": "../chrome-extension",
+      "loadInBrowser": true,
+      "testMode": true
+    }
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "name": "proofvault",
+  "version": "1.0.0",
+  "description": "Blockchain-powered digital notary that transforms web screenshots into tamper-proof legal evidence",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run build:extension && npm run build:backend && npm run build:frontend",
+    "build:extension": "cd chrome-extension && npm run build",
+    "build:backend": "cd backend-api && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend-api && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "test": "npm run test:backend && npm run test:frontend && npm run test:extension",
+    "test:backend": "cd backend-api && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "test:extension": "cd chrome-extension && npm test",
+    "lint": "npm run lint:backend && npm run lint:frontend && npm run lint:extension",
+    "lint:backend": "cd backend-api && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint:extension": "cd chrome-extension && npm run lint",
+    "install:all": "npm install && npm run install:backend && npm run install:frontend && npm run install:extension && npm run install:database",
+    "install:backend": "cd backend-api && npm install",
+    "install:frontend": "cd frontend && npm install",
+    "install:extension": "cd chrome-extension && npm install",
+    "install:database": "cd database && npm install",
+    "setup:db": "cd database && npm run setup",
+    "migrate:db": "cd database && npm run migrate",
+    "seed:db": "cd database && npm run seed",
+    "monitor:db": "cd database && node scripts/monitor.js",
+    "backup:db": "cd database && node scripts/backup.js backup"
+  },
+  "workspaces": [
+    "chrome-extension",
+    "backend-api",
+    "frontend",
+    "database"
+  ],
+  "keywords": [
+    "blockchain",
+    "pdf",
+    "evidence",
+    "constellation",
+    "metagraph",
+    "chrome-extension",
+    "digital-notary",
+    "cryptographic-proof"
+  ],
+  "author": "Evidence Online",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/evidenceonline/ProofVault.git"
+  },
+  "bugs": {
+    "url": "https://github.com/evidenceonline/ProofVault/issues"
+  },
+  "homepage": "https://github.com/evidenceonline/ProofVault#readme",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

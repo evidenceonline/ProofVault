@@ -1,0 +1,135 @@
+{
+  "version": "v0.15.0",
+  "project_name": "ProofVault",
+  "github_token": "YOUR_GITHUB_TOKEN_HERE",
+  "metagraph_id": "",
+  "tessellation_version": "2.8.1",
+  "ref_type": "tag",
+  "framework": {
+    "name": "tessellation",
+    "version": "v0.15.0",
+    "ref_type": "tag",
+    "modules": [
+      "shared",
+      "node-shared",
+      "keytool",
+      "sdk"
+    ]
+  },
+  "nodes": [
+    {
+      "key_file": {
+        "name": "token-key-1.p12",
+        "alias": "alias",
+        "password": "password"
+      },
+      "ip": "localhost",
+      "public_port": 9000,
+      "private_port": 9001,
+      "cli_port": 9002
+    },
+    {
+      "key_file": {
+        "name": "token-key-2.p12",
+        "alias": "alias",
+        "password": "password"
+      },
+      "ip": "localhost",
+      "public_port": 9010,
+      "private_port": 9011,
+      "cli_port": 9012
+    },
+    {
+      "key_file": {
+        "name": "token-key-1.p12",
+        "alias": "alias",
+        "password": "password"
+      },
+      "ip": "localhost",
+      "public_port": 9020,
+      "private_port": 9021,
+      "cli_port": 9022
+    }
+  ],
+  "docker": {
+    "start_grafana_container": true
+  },
+  "layers": {
+    "global-l0": [
+      "1",
+      "2",
+      "3"
+    ],
+    "dag-l1": [
+      "1",
+      "2",
+      "3"
+    ],
+    "metagraph-l0": [
+      "1",
+      "2",
+      "3"
+    ],
+    "currency-l1": [
+      "1",
+      "2",
+      "3"
+    ],
+    "data-l1": [
+      "1",
+      "2",
+      "3"
+    ]
+  },
+  "deploy": {
+    "network": {
+      "name": "integrationnet",
+      "gl0_node": {
+        "ip": "13.52.246.74",
+        "id": "89c9d78ad8497634e32e2baab6f8ab514ee2f3de2c3f9e6a8f5a8fee09dc1e1b770e4bc5e4c2f48a1a66f8fb7bffa0e2e6db36b9a7b4c5b7c8a3b2f6d9c4e7f8",
+        "public_port": 9000
+      }
+    },
+    "ansible": {
+      "hosts": "infra/ansible/remote/hosts.ansible.yml",
+      "playbooks": {
+        "configure": "infra/ansible/remote/nodes/playbooks/deploy/configure.ansible.yml"
+      },
+      "nodes": {
+        "playbooks": {
+          "deploy": "infra/ansible/remote/nodes/playbooks/deploy/deploy.ansible.yml",
+          "start": "infra/ansible/remote/nodes/playbooks/start/start.ansible.yml"
+        }
+      },
+      "monitoring": {
+        "enabled": false,
+        "grafana_host": "localhost",
+        "grafana_port": 3000,
+        "grafana_user": "admin",
+        "grafana_password": "admin",
+        "playbooks": {
+          "deploy": "infra/ansible/remote/monitoring/playbooks/deploy/deploy.ansible.yml",
+          "start": "infra/ansible/remote/monitoring/playbooks/start/start.ansible.yml"
+        }
+      }
+    }
+  },
+  "snapshot_fees": {
+    "owner": {
+      "address": "",
+      "key_file": {
+        "name": "token-key-1.p12",
+        "alias": "alias",
+        "password": "password"
+      }
+    },
+    "staking": {
+      "address": "",
+      "key_file": {
+        "name": "token-key-2.p12",
+        "alias": "alias",
+        "password": "password"
+      }
+    }
+  }
+}

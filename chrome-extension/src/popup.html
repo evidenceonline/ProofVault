@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProofVault - PDF Evidence System</title>
+  <link rel="stylesheet" href="styles/popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <img src="icons/icon-32.png" alt="ProofVault">
+        <h1>ProofVault</h1>
+      </div>
+      <div class="status-indicator" id="statusIndicator">
+        <span class="status-dot"></span>
+        <span class="status-text">Ready</span>
+      </div>
+    </header>
+
+    <!-- Main Actions -->
+    <main class="main-content">
+      <!-- Capture Section -->
+      <section class="capture-section">
+        <button id="captureBtn" class="primary-btn">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+          Capture Current Page
+        </button>
+        <p class="capture-hint">Capture and generate cryptographic proof</p>
+      </section>
+
+      <!-- Progress Section (hidden by default) -->
+      <section id="progressSection" class="progress-section hidden">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <p class="progress-text" id="progressText">Processing...</p>
+      </section>
+
+      <!-- Result Section (hidden by default) -->
+      <section id="resultSection" class="result-section hidden">
+        <div class="result-header">
+          <svg class="result-icon success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          <h2>PDF Evidence Created</h2>
+        </div>
+        
+        <div class="metadata-grid">
+          <div class="metadata-item">
+            <label>Hash (SHA-256):</label>
+            <div class="hash-display">
+              <code id="hashDisplay" class="hash-text"></code>
+              <button id="copyHashBtn" class="copy-btn" title="Copy hash">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <div class="metadata-item">
+            <label>Timestamp:</label>
+            <span id="timestampDisplay"></span>
+          </div>
+          
+          <div class="metadata-item">
+            <label>Status:</label>
+            <span id="statusDisplay" class="status-badge"></span>
+          </div>
+          
+          <div class="metadata-item">
+            <label>File Size:</label>
+            <span id="sizeDisplay"></span>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button id="saveBtn" class="secondary-btn">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            Save PDF
+          </button>
+          <button id="verifyBtn" class="secondary-btn">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 11 12 14 22 4"></polyline>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+            Verify
+          </button>
+        </div>
+      </section>
+
+      <!-- History Section -->
+      <section class="history-section">
+        <div class="section-header">
+          <h3>Recent Captures</h3>
+          <button id="viewAllBtn" class="text-btn">View All</button>
+        </div>
+        <div id="historyList" class="history-list">
+          <p class="empty-state">No captures yet</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <button id="settingsBtn" class="icon-btn" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3m16.24-6.36l-4.24 4.24m-6.12 6.12l-4.24 4.24m12.72 0l-4.24-4.24m-6.12-6.12L2.76 2.76"></path>
+        </svg>
+      </button>
+      <span class="version">v1.0.0</span>
+      <button id="helpBtn" class="icon-btn" title="Help">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+      </button>
+    </footer>
+  </div>
+</body>
+</html>

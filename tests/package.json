@@ -1,0 +1,70 @@
+{
+  "name": "proofvault-e2e-tests",
+  "version": "1.0.0",
+  "description": "Comprehensive end-to-end test suite for ProofVault blockchain-powered digital notary system",
+  "main": "e2e/index.js",
+  "scripts": {
+    "test": "node e2e/index.js",
+    "test:e2e": "node e2e/index.js --config=config/e2e.json",
+    "test:integration": "node e2e/index.js --suites=component,api",
+    "test:performance": "node e2e/index.js --suites=performance",
+    "test:api": "node e2e/index.js --suites=api",
+    "test:errors": "node e2e/index.js --suites=errors",
+    "test:chrome": "node e2e/index.js --browsers=chrome",
+    "test:firefox": "node e2e/index.js --browsers=firefox",
+    "test:headless": "node e2e/index.js --headless",
+    "test:ci": "node e2e/index.js --ci --headless --timeout=600000",
+    "generate-data": "node e2e/utils/testDataGenerator.js",
+    "setup": "npm run generate-data && node scripts/setup-test-env.js",
+    "cleanup": "node scripts/cleanup-test-env.js",
+    "report": "node scripts/generate-reports.js",
+    "lint": "eslint e2e/ --ext .js",
+    "lint:fix": "eslint e2e/ --ext .js --fix"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "puppeteer": "^21.0.0",
+    "ws": "^8.14.0",
+    "pg": "^8.11.0",
+    "form-data": "^4.0.0",
+    "jsonwebtoken": "^9.0.0",
+    "commander": "^11.0.0",
+    "chalk": "^4.1.2",
+    "ora": "^5.4.1",
+    "table": "^6.8.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.50.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.28.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^6.1.0",
+    "prettier": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "e2e-testing",
+    "blockchain",
+    "pdf-evidence",
+    "constellation-network",
+    "metagraph",
+    "digital-notary",
+    "test-automation",
+    "performance-testing",
+    "integration-testing"
+  ],
+  "author": "ProofVault Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/evidenceonline/ProofVault.git",
+    "directory": "tests"
+  },
+  "bugs": {
+    "url": "https://github.com/evidenceonline/ProofVault/issues"
+  },
+  "homepage": "https://github.com/evidenceonline/ProofVault#readme"
+}
