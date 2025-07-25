@@ -48,8 +48,11 @@ jobs:
       - name: Load config file
         shell: bash
         run: |
+          echo "Loading GitHub token into euclid.json..."
           contents="$(jq --arg GITHUB_TOKEN "${{ secrets.TOKEN }}" '.github_token = $GITHUB_TOKEN' euclid.json)"
           echo -E "${contents}" > euclid.json
+          echo "Verifying token was set (showing first 10 chars):"
+          jq -r '.github_token' euclid.json | cut -c1-10
           
       - name: Run steps
         shell: bash
@@ -76,6 +79,13 @@ jobs:
           
           # Skip install since project is already set up
           # scripts/hydra install
+          
+          # Check if we're in GitHub Actions CI environment
+          if [ -n "$GITHUB_ACTIONS" ]; then
+            echo "Running in GitHub Actions - checking for existing build"
+            # Clean up any existing builds to avoid tag conflicts
+            docker image prune -f || true
+          fi
           
           scripts/hydra build
           
