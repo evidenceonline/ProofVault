@@ -35,19 +35,13 @@ object AddressUtils {
     def admin: Address = throw new NotImplementedError("Admin address derivation not yet implemented")
   }
 
-  /**
-   * Future implementation: Create DAG address from public key
-   * 
-   * Process:
-   * 1. Apply PKCS prefix '3056301006072a8648ce3d020106052b8104000a03420004'
-   * 2. SHA256 hash of public key + prefix  
-   * 3. Base58 encode first 36 characters
-   * 4. Calculate check digit from hash
-   * 5. Combine: "DAG" + checkDigit + base58Hash
-   */
-  def createFromPublicKey(_publicKey: String): Either[String, Address] = {
-    Left("Address creation from public key not yet implemented")
-  }
+  // Future implementation: Create DAG address from public key
+  // Process:
+  // 1. Apply PKCS prefix '3056301006072a8648ce3d020106052b8104000a03420004'
+  // 2. SHA256 hash of public key + prefix  
+  // 3. Base58 encode first 36 characters
+  // 4. Calculate check digit from hash
+  // 5. Combine: "DAG" + checkDigit + base58Hash
 
   /**
    * Future implementation: Validate DAG address format
