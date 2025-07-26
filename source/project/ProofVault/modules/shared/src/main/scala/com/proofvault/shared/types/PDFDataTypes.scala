@@ -1,7 +1,7 @@
 package com.proofvault.shared.types
 
 import cats.implicits._
-import cats.effect.Sync
+import cats.Applicative
 import derevo.cats.{eqv, show}
 import derevo.circe.magnolia.{decoder, encoder}
 import derevo.derive
@@ -202,11 +202,16 @@ object PDFDataApplication extends DataApplication[
   override def genesis: DataState[PDFState, PDFUpdate] = 
     PDFState(Map.empty)
     
-  override def routes[F[_]](implicit context: L1NodeContext[F]): HttpRoutes[F] = 
-    new HttpRoutes[F] {
-      def run(req: org.http4s.Request[F]): cats.data.OptionT[F, org.http4s.Response[F]] = 
-        cats.data.OptionT.none
+  override def routes[F[_]](implicit context: L1NodeContext[F]): HttpRoutes[F] = {
+    implicit val applicativeF: Applicative[F] = new Applicative[F] {
+      def pure[A](a: A): F[A] = throw new NotImplementedError("Applicative.pure")
+      def ap[A, B](ff: F[A => B])(fa: F[A]): F[B] = throw new NotImplementedError("Applicative.ap")
     }
+    // Return empty routes - no endpoints defined
+    val emptyService: org.http4s.Request[F] => cats.data.OptionT[F, org.http4s.Response[F]] = 
+      _ => cats.data.OptionT.fromOption[F](None)
+    HttpRoutes(emptyService)
+  }
     
   // Validation helpers
   private def validateHashFormat(hash: String): IO[DataApplicationValidationError, Unit] = 
