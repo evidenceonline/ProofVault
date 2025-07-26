@@ -10,7 +10,7 @@ import eu.timepit.refined.auto._
 import eu.timepit.refined.types.numeric.NonNegLong
 import io.circe.refined._
 import com.proofvault.shared.compatibility.DataApplicationCompat._
-import com.proofvault.shared.AddressUtils
+// import com.proofvault.shared.AddressUtils // Removed due to validation issues
 import org.http4s.HttpRoutes
 import org.tessellation.schema.SnapshotOrdinal
 import org.tessellation.schema.address.Address
@@ -168,7 +168,7 @@ object PDFDataApplication extends DataApplication[
   override def deserializeUpdate(
     bytes: Array[Byte]
   ): IO[DataApplicationValidationError, PDFUpdate] = 
-    IO.pure(RegisterPDF("", "", "", 0L, AddressUtils.TestAddresses.genesis, "")) // Implement deserialization
+    throw new NotImplementedError("Deserialization not yet implemented") // TODO: Implement proper deserialization
     
   override def getOnChainState(
     state: DataState[PDFState, PDFUpdate]
