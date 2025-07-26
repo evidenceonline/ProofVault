@@ -2,6 +2,7 @@ package com.proofvault.shared.types
 
 import cats.implicits._
 import cats.Monad
+import cats.data.NonEmptyList
 import derevo.cats.{eqv, show}
 import derevo.circe.magnolia.{decoder, encoder}
 import derevo.derive
@@ -166,7 +167,7 @@ object PDFDataApplication extends DataApplication[
   override def deserializeUpdate(
     bytes: Array[Byte]
   ): IO[DataApplicationValidationError, PDFUpdate] = 
-    IO.pure(RegisterPDF("", "", "", 0L, Address("DAG0000000000000000000000000000000000000"), "")) // Implement deserialization
+    IO.pure(RegisterPDF("", "", "", 0L, Address("DAG0000000000000000000000000000000000000000"), "")) // Implement deserialization
     
   override def getOnChainState(
     state: DataState[PDFState, PDFUpdate]

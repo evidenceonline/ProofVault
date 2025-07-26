@@ -45,7 +45,7 @@ object DataApplicationCompat {
   type DataApplicationValidationError = com.proofvault.shared.compatibility.DataApplicationValidationError
   type L1NodeContext[F[_]] = com.proofvault.shared.compatibility.L1NodeContext[F]
   
-  // IO type that supports error handling
+  // IO type that supports error handling - use EitherT
   type IO[E, A] = EitherT[cats.effect.IO, E, A]
   
   val DataApplicationValidationError = com.proofvault.shared.compatibility.DataApplicationValidationError
@@ -60,20 +60,20 @@ object DataApplicationCompat {
 
 // Base data application service
 abstract class BaseDataApplicationL1Service[F[_]] {
-  def validateUpdate(update: DataUpdate, state: DataOnChainState): IO[DataApplicationValidationError, Unit]
-  def validateData(updates: NonEmptyList[Signed[DataUpdate]]): IO[DataApplicationValidationError, Unit] 
-  def combine(state: DataOnChainState, updates: List[Signed[DataUpdate]]): IO[DataApplicationValidationError, DataOnChainState]
+  def validateUpdate(update: DataUpdate, state: OnChainState): cats.effect.IO[Unit]
+  def validateData(updates: NonEmptyList[Signed[DataUpdate]]): cats.effect.IO[Unit] 
+  def combine(state: OnChainState, updates: List[Signed[DataUpdate]]): cats.effect.IO[OnChainState]
   def routes: HttpRoutes[F]
 }
 
 // Data application trait
 trait DataApplication[U <: DataUpdate, S <: DataState[S, U], CS <: DataCalculatedState, OS <: OnChainState] {
   def name: String
-  def validateUpdate(state: DataState[S, U], update: U)(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, Unit]
-  def validateData(state: DataState[S, U], updates: NonEmptyList[Signed[U]])(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, Unit]
-  def combine(state: DataState[S, U], updates: List[Signed[U]])(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, S]
-  def getCalculatedState(state: DataState[S, U])(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, CS]
-  def getOnChainState(state: DataState[S, U])(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, OS]
+  def validateUpdate(state: DataState[S, U], update: U)(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, Unit]
+  def validateData(state: DataState[S, U], updates: NonEmptyList[Signed[U]])(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, Unit]
+  def combine(state: DataState[S, U], updates: List[Signed[U]])(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, S]
+  def getCalculatedState(state: DataState[S, U])(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, CS]
+  def getOnChainState(state: DataState[S, U])(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, OS]
   def genesis: DataState[S, U]
   
   // Serialization methods (placeholder implementations)
@@ -85,7 +85,7 @@ trait DataApplication[U <: DataUpdate, S <: DataState[S, U], CS <: DataCalculate
   def deserializeCalculatedState(bytes: Array[Byte]): IO[DataApplicationValidationError, DataCalculatedState]
   def serializeOnChainState(state: OnChainState): IO[DataApplicationValidationError, Array[Byte]]
   def deserializeOnChainState(bytes: Array[Byte]): IO[DataApplicationValidationError, OnChainState]
-  def hashCalculatedState(state: DataCalculatedState)(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, org.tessellation.security.hash.Hash]
+  def hashCalculatedState(state: DataCalculatedState)(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, org.tessellation.security.hash.Hash]
   
   // HTTP routes for the data application
   def routes[F[_]](implicit context: L1NodeContext[F]): HttpRoutes[F]
