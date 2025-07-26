@@ -11,9 +11,6 @@ import org.tessellation.dag.l1.domain.transaction.{CustomContextualTransactionVa
 import org.tessellation.dag.l1.domain.transaction.ContextualTransactionValidator.CustomValidationError
 import eu.timepit.refined.auto._
 import scala.collection.concurrent.TrieMap
-import org.typelevel.log4cats.Logger
-import org.typelevel.log4cats.slf4j.Slf4jLogger
-import cats.effect.IO
 
 object Main extends CurrencyL1App(
   "proofvault-l1",
