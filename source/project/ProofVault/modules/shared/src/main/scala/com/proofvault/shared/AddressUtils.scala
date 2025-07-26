@@ -1,6 +1,7 @@
 package com.proofvault.shared
 
 import org.tessellation.schema.address.Address
+import eu.timepit.refined.auto._
 import java.security.MessageDigest
 import scala.util.{Try, Success, Failure}
 
@@ -25,7 +26,10 @@ object AddressUtils {
     } else if (hexString == "0" * 40) {
       Left("All-zeros address not allowed")
     } else {
-      Try(Address(s"DAG$hexString")) match {
+      Try {
+        val dagString = s"DAG$hexString"
+        Address(dagString)
+      } match {
         case Success(address) => Right(address)
         case Failure(ex) => Left(s"Address validation failed: ${ex.getMessage}")
       }
@@ -64,13 +68,14 @@ object AddressUtils {
 
   /**
    * Well-known test addresses for development and testing
+   * All addresses are exactly 43 characters: DAG + 40 hex chars
    */
   object TestAddresses {
     
-    // Genesis/system address - deterministic from "genesis" seed
+    // Genesis/system address - valid hex pattern
     val genesis: Address = Address("DAG89c9d78ad8497634e32e2baab6f8ab514ee2f3de2c")
     
-    // Test user addresses - deterministic from names
+    // Test user addresses - valid 40 hex chars after DAG
     val alice: Address = Address("DAG1234567890abcdef1234567890abcdef12345678")
     val bob: Address = Address("DAGabcdef1234567890abcdef1234567890abcdef12")
     val charlie: Address = Address("DAGfedcba0987654321fedcba0987654321fedcba09")
@@ -78,9 +83,9 @@ object AddressUtils {
     // Registry address for PDF operations
     val registry: Address = Address("DAG8888888888aaaaaaaaaa9999999999bbbbbbbbbb")
     
-    // System addresses
-    val system: Address = Address("DAGsystem1234567890abcdef1234567890abcdef123")
-    val admin: Address = Address("DAGadmin1234567890abcdef1234567890abcdef1234")
+    // System addresses - need pure hex after DAG
+    val system: Address = Address("DAG5555444433332222111100009999888877776666")
+    val admin: Address = Address("DAGaaaa111122223333444455556666777788889999")
   }
 
   /**
