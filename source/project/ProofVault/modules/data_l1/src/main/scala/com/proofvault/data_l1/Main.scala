@@ -6,6 +6,7 @@ import cats.implicits._
 import cats.data.NonEmptyList
 import org.tessellation.BuildInfo
 import com.proofvault.shared.compatibility.DataApplicationCompat._
+import com.proofvault.shared.compatibility.BaseDataApplicationL1Service
 import org.tessellation.currency.l1.CurrencyL1App
 import org.tessellation.schema.cluster.ClusterId
 import org.tessellation.schema.semver.{MetagraphVersion, TessellationVersion}
@@ -41,9 +42,9 @@ class PDFEvidenceDataApplicationL1Service extends BaseDataApplicationL1Service[I
   
   override def validateUpdate(
     update: DataUpdate,
-    state: OnChainState
+    _state: OnChainState
   ): cats.effect.IO[Unit] = update match {
-    case RegisterPDF(hash, url, title, timestamp, submitter, id) =>
+    case RegisterPDF(_, _, _, _, _, _) =>
       // TODO: Implement validation logic
       IO.unit
     case _ => 
