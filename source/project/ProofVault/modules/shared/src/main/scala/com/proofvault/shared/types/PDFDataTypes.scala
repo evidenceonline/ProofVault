@@ -1,11 +1,12 @@
 package com.proofvault.shared.types
 
 import cats.implicits._
-import cats.Applicative
+import cats.{Applicative, Monad}
 import derevo.cats.{eqv, show}
 import derevo.circe.magnolia.{decoder, encoder}
 import derevo.derive
 import eu.timepit.refined.auto._
+import eu.timepit.refined.types.numeric.NonNegLong
 import io.circe.refined._
 import com.proofvault.shared.compatibility.DataApplicationCompat._
 import org.http4s.HttpRoutes
@@ -140,7 +141,7 @@ object PDFDataApplication extends DataApplication[
   override def getCalculatedState(
     state: DataState[PDFState, PDFUpdate]
   )(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, PDFCalculatedState] = 
-    IO.pure(PDFCalculatedState.from(state.asInstanceOf[PDFState], context.getLastSnapshot.ordinal))
+    IO.pure(PDFCalculatedState.from(state.asInstanceOf[PDFState], SnapshotOrdinal(NonNegLong.unsafeFrom(context.getLastSnapshot.ordinal))))
     
   override def hashCalculatedState(
     state: DataCalculatedState
@@ -165,7 +166,7 @@ object PDFDataApplication extends DataApplication[
   override def deserializeUpdate(
     bytes: Array[Byte]
   ): IO[DataApplicationValidationError, PDFUpdate] = 
-    IO.pure(RegisterPDF("", "", "", 0L, Address("DAG0" + "0" * 36), "")) // Implement deserialization
+    IO.pure(RegisterPDF("", "", "", 0L, Address("DAG0000000000000000000000000000000000000000"), "")) // Implement deserialization
     
   override def getOnChainState(
     state: DataState[PDFState, PDFUpdate]
@@ -203,9 +204,10 @@ object PDFDataApplication extends DataApplication[
     PDFState(Map.empty)
     
   override def routes[F[_]](implicit context: L1NodeContext[F]): HttpRoutes[F] = {
-    implicit val applicativeF: Applicative[F] = new Applicative[F] {
-      def pure[A](a: A): F[A] = throw new NotImplementedError("Applicative.pure")
-      def ap[A, B](ff: F[A => B])(fa: F[A]): F[B] = throw new NotImplementedError("Applicative.ap")
+    implicit val monadF: Monad[F] = new Monad[F] {
+      def pure[A](a: A): F[A] = throw new NotImplementedError("Monad.pure")
+      def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B] = throw new NotImplementedError("Monad.flatMap")
+      def tailRecM[A, B](a: A)(f: A => F[Either[A, B]]): F[B] = throw new NotImplementedError("Monad.tailRecM")
     }
     // Return empty routes - no endpoints defined
     val emptyService: org.http4s.Request[F] => cats.data.OptionT[F, org.http4s.Response[F]] = 
