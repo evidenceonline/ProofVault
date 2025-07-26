@@ -167,7 +167,7 @@ object PDFDataApplication extends DataApplication[
   override def deserializeUpdate(
     bytes: Array[Byte]
   ): IO[DataApplicationValidationError, PDFUpdate] = 
-    IO.pure(RegisterPDF("", "", "", 0L, Address("DAG1111111111111111111111111111111111111111"), "")) // Implement deserialization
+    IO.pure(RegisterPDF("", "", "", 0L, Address("DAG1" + "0" * 36), "")) // Implement deserialization
     
   override def getOnChainState(
     state: DataState[PDFState, PDFUpdate]
