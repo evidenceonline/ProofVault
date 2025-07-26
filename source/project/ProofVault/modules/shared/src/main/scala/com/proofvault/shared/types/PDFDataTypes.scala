@@ -1,27 +1,15 @@
 package com.proofvault.shared.types
 
-import cats.implicits._
-import cats.Monad
-import cats.data.NonEmptyList
 import derevo.cats.{eqv, show}
 import derevo.circe.magnolia.{decoder, encoder}
 import derevo.derive
-import eu.timepit.refined.auto._
-import eu.timepit.refined.types.numeric.NonNegLong
-import io.circe.refined._
-import com.proofvault.shared.compatibility.DataApplicationCompat._
-import com.proofvault.shared.AddressUtils
-import org.http4s.HttpRoutes
-import org.tessellation.schema.SnapshotOrdinal
 import org.tessellation.schema.address.Address
-import org.tessellation.security.hash.Hash
-import org.tessellation.security.signature.Signed
 
 import java.util.UUID
 
 // PDF Evidence Update - represents a state change in the PDF registry
 @derive(encoder, decoder, eqv, show)
-sealed trait PDFUpdate extends DataUpdate
+sealed trait PDFUpdate
 
 @derive(encoder, decoder, eqv, show)
 case class RegisterPDF(
@@ -42,7 +30,7 @@ object RegisterPDF {
 @derive(encoder, decoder, eqv, show)
 case class PDFState(
   registeredPDFs: Map[String, PDFInfo]
-) extends DataState[PDFState, PDFUpdate] {
+) {
   
   def combine(other: PDFState): PDFState = 
     PDFState(registeredPDFs ++ other.registeredPDFs)
@@ -52,6 +40,19 @@ case class PDFState(
       val info = PDFInfo(hash, url, title, timestamp, submitter, id)
       PDFState(registeredPDFs + (hash -> info))
   }
+  
+  def isHashRegistered(hash: String): Boolean = 
+    registeredPDFs.contains(hash)
+  
+  def getPDFByHash(hash: String): Option[PDFInfo] = 
+    registeredPDFs.get(hash)
+  
+  def getPDFsBySubmitter(address: Address): List[PDFInfo] = 
+    registeredPDFs.values.filter(_.submitterAddress == address).toList
+}
+
+object PDFState {
+  val empty: PDFState = PDFState(Map.empty)
 }
 
 @derive(encoder, decoder, eqv, show)
@@ -70,13 +71,10 @@ case class PDFCalculatedState(
   registeredPDFs: Map[String, PDFInfo],
   totalRegistrations: Long,
   registrationsByAddress: Map[Address, List[String]] // Address -> List of PDF hashes
-) extends DataCalculatedState
+)
 
 object PDFCalculatedState {
-  def from(
-    state: PDFState,
-    ordinal: SnapshotOrdinal
-  ): PDFCalculatedState = {
+  def from(state: PDFState): PDFCalculatedState = {
     val registrationsByAddress = state.registeredPDFs.values
       .groupBy(_.submitterAddress)
       .view
@@ -96,149 +94,38 @@ object PDFCalculatedState {
 case class PDFOnChainState(
   lastHash: Option[String],
   totalCount: Long
-) extends OnChainState
+)
 
-// Data application definition
-object PDFDataApplication extends DataApplication[
-  PDFUpdate,
-  PDFState,
-  PDFCalculatedState,
-  PDFOnChainState
-] {
-  
-  override def name: String = "PDFEvidence"
-  
-  override def validateUpdate(
-    state: DataState[PDFState, PDFUpdate],
-    update: PDFUpdate
-  )(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, Unit] = 
-    update match {
-      case RegisterPDF(hash, url, title, timestamp, _, _) =>
-        for {
-          _ <- validateHashFormat(hash)
-          _ <- validateDuplicate(state.asInstanceOf[PDFState], hash)
-          _ <- validateTimestamp(timestamp)
-          _ <- validateMetadata(url, title)
-        } yield ()
-    }
-    
-  override def validateData(
-    state: DataState[PDFState, PDFUpdate],
-    updates: NonEmptyList[Signed[PDFUpdate]]
-  )(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, Unit] = 
-    updates.traverse_ { signedUpdate =>
-      validateUpdate(state, signedUpdate.value)
-    }
-    
-  override def combine(
-    state: DataState[PDFState, PDFUpdate],
-    updates: List[Signed[PDFUpdate]]
-  )(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, PDFState] = 
-    IO.pure {
-      updates.foldLeft(state.asInstanceOf[PDFState]) { (acc, signedUpdate) =>
-        acc.applyUpdate(signedUpdate.value)
-      }
-    }
-    
-  override def getCalculatedState(
-    state: DataState[PDFState, PDFUpdate]
-  )(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, PDFCalculatedState] = 
-    IO.pure(PDFCalculatedState.from(state.asInstanceOf[PDFState], SnapshotOrdinal(NonNegLong.unsafeFrom(context.getLastSnapshot.ordinal))))
-    
-  override def hashCalculatedState(
-    state: DataCalculatedState
-  )(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, Hash] = 
-    IO.pure(Hash.empty) // Implement proper hashing
-    
-  override def serializeState(
-    state: DataState[PDFState, PDFUpdate]
-  ): IO[DataApplicationValidationError, Array[Byte]] = 
-    IO.pure(Array.empty) // Implement serialization
-    
-  override def deserializeState(
-    bytes: Array[Byte]
-  ): IO[DataApplicationValidationError, DataState[PDFState, PDFUpdate]] = 
-    IO.pure(PDFState(Map.empty)) // Implement deserialization
-    
-  override def serializeUpdate(
-    update: PDFUpdate
-  ): IO[DataApplicationValidationError, Array[Byte]] = 
-    IO.pure(Array.empty) // Implement serialization
-    
-  override def deserializeUpdate(
-    bytes: Array[Byte]
-  ): IO[DataApplicationValidationError, PDFUpdate] = 
-    IO.pure(RegisterPDF("", "", "", 0L, AddressUtils.TestAddresses.genesis, "")) // TODO: Implement proper deserialization
-    
-  override def getOnChainState(
-    state: DataState[PDFState, PDFUpdate]
-  )(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, PDFOnChainState] = {
-    val pdfState = state.asInstanceOf[PDFState]
-    val lastHash = pdfState.registeredPDFs.values.toList
+object PDFOnChainState {
+  def from(state: PDFState): PDFOnChainState = {
+    val lastHash = state.registeredPDFs.values.toList
       .sortBy(_.captureTimestamp)
       .lastOption
       .map(_.hash)
       
-    IO.pure(PDFOnChainState(lastHash, pdfState.registeredPDFs.size.toLong))
+    PDFOnChainState(lastHash, state.registeredPDFs.size.toLong)
+  }
+}
+
+// Validation errors specific to PDF operations
+sealed trait PDFValidationError {
+  def message: String
+}
+
+object PDFValidationError {
+  case class InvalidHashFormat(hash: String) extends PDFValidationError {
+    val message = s"Invalid SHA-256 hash format: $hash. Must be 64 character hex string."
   }
   
-  override def serializeCalculatedState(
-    state: DataCalculatedState
-  ): IO[DataApplicationValidationError, Array[Byte]] = 
-    IO.pure(Array.empty) // Implement serialization
-    
-  override def deserializeCalculatedState(
-    bytes: Array[Byte]
-  ): IO[DataApplicationValidationError, DataCalculatedState] = 
-    IO.pure(PDFCalculatedState(Map.empty, 0L, Map.empty)) // Implement deserialization
-    
-  override def serializeOnChainState(
-    state: OnChainState
-  ): IO[DataApplicationValidationError, Array[Byte]] = 
-    IO.pure(Array.empty) // Implement serialization
-    
-  override def deserializeOnChainState(
-    bytes: Array[Byte]
-  ): IO[DataApplicationValidationError, OnChainState] = 
-    IO.pure(PDFOnChainState(None, 0L)) // Implement deserialization
-    
-  override def genesis: DataState[PDFState, PDFUpdate] = 
-    PDFState(Map.empty)
-    
-  override def routes[F[_]](implicit context: L1NodeContext[F]): HttpRoutes[F] = {
-    implicit val monadF: Monad[F] = new Monad[F] {
-      def pure[A](a: A): F[A] = throw new NotImplementedError("Monad.pure")
-      def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B] = throw new NotImplementedError("Monad.flatMap")
-      def tailRecM[A, B](a: A)(f: A => F[Either[A, B]]): F[B] = throw new NotImplementedError("Monad.tailRecM")
-    }
-    // Return empty routes - no endpoints defined
-    val emptyService: org.http4s.Request[F] => cats.data.OptionT[F, org.http4s.Response[F]] = 
-      _ => cats.data.OptionT.fromOption[F](None)
-    HttpRoutes(emptyService)
+  case class DuplicateHash(hash: String) extends PDFValidationError {
+    val message = s"PDF with hash $hash is already registered."
   }
-    
-  // Validation helpers
-  private def validateHashFormat(hash: String): IO[DataApplicationValidationError, Unit] = 
-    if (RegisterPDF.isValidHash(hash)) 
-      IO.unit
-    else 
-      IO.raiseError(DataApplicationValidationError(s"Invalid SHA-256 hash format: $hash"))
-      
-  private def validateDuplicate(state: PDFState, hash: String): IO[DataApplicationValidationError, Unit] = 
-    if (state.registeredPDFs.contains(hash))
-      IO.raiseError(DataApplicationValidationError(s"PDF with hash $hash already registered"))
-    else
-      IO.unit
-      
-  private def validateTimestamp(timestamp: Long): IO[DataApplicationValidationError, Unit] = 
-    if (timestamp > 0 && timestamp <= System.currentTimeMillis())
-      IO.unit
-    else
-      IO.raiseError(DataApplicationValidationError(s"Invalid timestamp: $timestamp"))
-      
-  private def validateMetadata(url: String, title: String): IO[DataApplicationValidationError, Unit] = 
-    if (url.nonEmpty && title.nonEmpty && title.length <= 500)
-      IO.unit
-    else
-      IO.raiseError(DataApplicationValidationError("Invalid metadata"))
+  
+  case class InvalidMetadata(field: String, value: String) extends PDFValidationError {
+    val message = s"Invalid metadata field $field: $value"
+  }
+  
+  case class InvalidTimestamp(timestamp: Long) extends PDFValidationError {
+    val message = s"Invalid timestamp: $timestamp. Must be a valid Unix timestamp."
+  }
 }

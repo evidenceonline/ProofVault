@@ -97,6 +97,6 @@ lazy val dataL1 = (project in file("modules/data_l1"))
       CompilerPlugin.kindProjector,
       CompilerPlugin.betterMonadicFor,
       CompilerPlugin.semanticDB,
-      Libraries.tessellationCurrencyL1.exclude("pl.abankowski", "http4s-request-signer_2.13").exclude("pl.abankowski", "http-request-signer-core_2.13")
+      Libraries.tessellationCurrencyDataApplication.exclude("pl.abankowski", "http4s-request-signer_2.13").exclude("pl.abankowski", "http-request-signer-core_2.13")
     )
   )
