@@ -5,7 +5,7 @@ import io.circe.syntax._
 import org.tessellation.schema.address.Address
 import org.tessellation.schema.transaction.{Transaction, TransactionReference, TransactionAmount, TransactionFee, TransactionSalt}
 import eu.timepit.refined.auto._
-import eu.timepit.refined.types.numeric.NonNegLong
+import eu.timepit.refined.types.numeric.{NonNegLong, PosLong}
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
@@ -66,7 +66,7 @@ object TransactionEncoding {
       Right(TransactionParameters(
         source = sourceAddress,
         destination = generateRegistryAddress(hash),
-        amount = NonNegLong(0L),
+        amount = PosLong.unsafeFrom(1L),
         fee = NonNegLong(0L), // Set appropriate fee
         salt = saltValue
       ))
@@ -98,7 +98,7 @@ object TransactionEncoding {
     // Create a deterministic address based on the PDF hash
     // This helps with querying and organization
     // Use a fixed valid DAG address for now
-    Address("DAG88888888888888888888888888888888888888")
+    Address("DAG8888888888888888888888888888888888888888")
   }
   
   /**
@@ -133,7 +133,7 @@ object TransactionEncoding {
   ): F[Transaction] = {
     
     Sync[F].fromEither(
-      encodePDFRegistration(registration, sourceAddress).map { params =>
+      encodePDFRegistration(registration, sourceAddress).left.map(new RuntimeException(_)).map { params =>
         Transaction(
           source = params.source,
           destination = params.destination,
@@ -161,7 +161,7 @@ object TransactionEncoding {
   case class TransactionParameters(
     source: Address,
     destination: Address,
-    amount: NonNegLong,
+    amount: PosLong,
     fee: NonNegLong,
     salt: Long
   )
