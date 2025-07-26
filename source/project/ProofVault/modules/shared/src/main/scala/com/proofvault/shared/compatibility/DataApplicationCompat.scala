@@ -7,16 +7,6 @@ import org.http4s.HttpRoutes
 // Compatibility layer for data application functionality
 // This provides the missing types that were removed from Tessellation 2.8.1
 
-// Use standard cats.effect.IO and handle errors via exceptions
-type IO[E, A] = cats.effect.IO[A]
-
-// Helper methods for IO
-object IO {
-  def pure[E, A](a: A): IO[E, A] = cats.effect.IO.pure(a)
-  def unit[E]: IO[E, Unit] = cats.effect.IO.unit
-  def raiseError[E, A](e: E): IO[E, A] = cats.effect.IO.raiseError(new RuntimeException(e.toString))
-}
-
 // Base data update trait
 trait DataUpdate
 
@@ -52,7 +42,17 @@ object DataApplicationCompat {
   type DataApplicationValidationError = com.proofvault.shared.compatibility.DataApplicationValidationError
   type L1NodeContext[F[_]] = com.proofvault.shared.compatibility.L1NodeContext[F]
   
+  // Use standard cats.effect.IO and handle errors via exceptions
+  type IO[E, A] = cats.effect.IO[A]
+  
   val DataApplicationValidationError = com.proofvault.shared.compatibility.DataApplicationValidationError
+  
+  // Helper methods for IO
+  object IO {
+    def pure[E, A](a: A): IO[E, A] = cats.effect.IO.pure(a)
+    def unit[E]: IO[E, Unit] = cats.effect.IO.unit
+    def raiseError[E, A](e: E): IO[E, A] = cats.effect.IO.raiseError(new RuntimeException(e.toString))
+  }
 }
 
 // Base data application service
@@ -65,6 +65,8 @@ abstract class BaseDataApplicationL1Service[F[_]] {
 
 // Data application trait
 trait DataApplication[U <: DataUpdate, S <: DataState[S, U], CS <: DataCalculatedState, OS <: OnChainState] {
+  import DataApplicationCompat.IO
+  
   def name: String
   def validateUpdate(state: DataState[S, U], update: U)(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, Unit]
   def validateData(state: DataState[S, U], updates: NonEmptyList[Signed[U]])(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, Unit]
