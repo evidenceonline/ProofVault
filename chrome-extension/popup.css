@@ -99,7 +99,13 @@ body {
     font-size: 12px;
 }
 
-.download-button {
+.button-group {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.download-button, .view-button {
     background-color: #4a9eff;
     color: white;
     border: none;
@@ -107,12 +113,20 @@ body {
     border-radius: 4px;
     font-size: 12px;
     cursor: pointer;
-    margin-top: 10px;
     transition: background-color 0.2s;
+    flex: 1;
 }
 
-.download-button:hover {
+.download-button:hover, .view-button:hover {
     background-color: #3a7fe0;
+}
+
+.view-button {
+    background-color: #8a4aff;
+}
+
+.view-button:hover {
+    background-color: #7a3ae0;
 }
 
 .hidden {

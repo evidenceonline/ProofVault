@@ -6,14 +6,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultDiv = document.getElementById('result');
     const generatedIdSpan = document.getElementById('generatedId');
     const downloadBtn = document.getElementById('downloadBtn');
+    const viewOnlineBtn = document.getElementById('viewOnlineBtn');
 
     let currentPdfBlob = null;
     let currentId = null;
+    let apiClient = new ApiClient();
 
     loadSavedData();
 
     vaultBtn.addEventListener('click', handleVaultClick);
     downloadBtn.addEventListener('click', downloadPdf);
+    viewOnlineBtn.addEventListener('click', viewOnline);
 
     companyInput.addEventListener('input', saveData);
     userInput.addEventListener('input', saveData);
@@ -66,8 +69,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             vaultBtn.disabled = true;
+            
+            // Check API health first
+            showStatus('Connecting to ProofVault...', 'loading');
+            await apiClient.checkHealth();
+            
             showStatus('Taking screenshot...', 'loading');
-
             const id = generateUniqueId();
             currentId = id;
 
@@ -75,15 +82,30 @@ document.addEventListener('DOMContentLoaded', function() {
             const screenshotDataUrl = await captureScreenshot(tab);
             
             showStatus('Generating PDF...', 'loading');
-            
             const pdfBlob = await generatePdf(company, user, id, screenshotDataUrl, tab.url, tab.title);
             currentPdfBlob = pdfBlob;
 
-            showResult(id);
+            showStatus('Uploading to ProofVault...', 'loading');
+            const uploadResponse = await apiClient.uploadPdf(pdfBlob, {
+                id: id,
+                company: company,
+                user: user
+            });
+
+            if (uploadResponse.success) {
+                showResult(uploadResponse.data.id);
+                currentId = uploadResponse.data.id;
+            } else {
+                throw new Error('Upload failed: ' + uploadResponse.message);
+            }
 
         } catch (error) {
             console.error('Error:', error);
-            showError('Failed to create PDF: ' + error.message);
+            if (error.message.includes('fetch') || error.message.includes('network')) {
+                showError('Cannot connect to ProofVault server. Please check if the API is running.');
+            } else {
+                showError('Failed to vault PDF: ' + error.message);
+            }
         } finally {
             vaultBtn.disabled = false;
         }
@@ -163,9 +185,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function downloadPdf() {
-        if (currentPdfBlob && currentId) {
-            const url = URL.createObjectURL(currentPdfBlob);
+    async function downloadPdf() {
+        if (!currentId) {
+            showError('No PDF to download');
+            return;
+        }
+
+        try {
+            showStatus('Downloading PDF...', 'loading');
+            const pdfBlob = await apiClient.getPdf(currentId, true);
+            
+            const url = URL.createObjectURL(pdfBlob);
             const a = document.createElement('a');
             a.href = url;
             a.download = `ProofVault_${currentId}.pdf`;
@@ -173,6 +203,18 @@ document.addEventListener('DOMContentLoaded', function() {
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+            
+            showResult(currentId);
+        } catch (error) {
+            console.error('Download error:', error);
+            showError('Failed to download PDF: ' + error.message);
+        }
+    }
+
+    function viewOnline() {
+        if (currentId) {
+            const viewUrl = `${API_CONFIG.BASE_URL}/pdf/${currentId}`;
+            chrome.tabs.create({ url: viewUrl });
         }
     }
 });

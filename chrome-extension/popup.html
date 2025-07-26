@@ -28,13 +28,18 @@
         
         <div id="status" class="status hidden"></div>
         <div id="result" class="result hidden">
-            <p>PDF Generated!</p>
+            <p>PDF Uploaded to ProofVault!</p>
             <p>ID: <span id="generatedId"></span></p>
-            <button id="downloadBtn" class="download-button">Download PDF</button>
+            <div class="button-group">
+                <button id="downloadBtn" class="download-button">Download PDF</button>
+                <button id="viewOnlineBtn" class="view-button">View Online</button>
+            </div>
         </div>
     </div>
     
     <script src="jspdf.umd.min.js"></script>
+    <script src="config.js"></script>
+    <script src="api.js"></script>
     <script src="popup.js"></script>
 </body>
 </html>
