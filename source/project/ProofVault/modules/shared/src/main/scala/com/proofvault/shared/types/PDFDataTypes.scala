@@ -1,14 +1,12 @@
 package com.proofvault.shared.types
 
-import cats.effect.Async
 import cats.implicits._
+import cats.effect.Sync
 import derevo.cats.{eqv, show}
 import derevo.circe.magnolia.{decoder, encoder}
 import derevo.derive
 import eu.timepit.refined.auto._
-import eu.timepit.refined.types.numeric.NonNegLong
 import io.circe.refined._
-import io.circe.{Decoder, Encoder}
 import com.proofvault.shared.compatibility.DataApplicationCompat._
 import org.http4s.HttpRoutes
 import org.tessellation.schema.SnapshotOrdinal
@@ -205,7 +203,10 @@ object PDFDataApplication extends DataApplication[
     PDFState(Map.empty)
     
   override def routes[F[_]](implicit context: L1NodeContext[F]): HttpRoutes[F] = 
-    HttpRoutes.empty[F] // Add custom API routes if needed
+    new HttpRoutes[F] {
+      def run(req: org.http4s.Request[F]): cats.data.OptionT[F, org.http4s.Response[F]] = 
+        cats.data.OptionT.none
+    }
     
   // Validation helpers
   private def validateHashFormat(hash: String): IO[DataApplicationValidationError, Unit] = 
