@@ -11,7 +11,9 @@ import org.tessellation.dag.l1.domain.transaction.{CustomContextualTransactionVa
 import org.tessellation.dag.l1.domain.transaction.ContextualTransactionValidator.CustomValidationError
 import eu.timepit.refined.auto._
 import scala.collection.concurrent.TrieMap
-import org.slf4j.LoggerFactory
+import org.typelevel.log4cats.Logger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
+import cats.effect.IO
 
 object Main extends CurrencyL1App(
   "proofvault-l1",
@@ -21,14 +23,14 @@ object Main extends CurrencyL1App(
   metagraphVersion = MetagraphVersion.unsafeFrom(BuildInfo.version)
 ) {
   
-  private val logger = LoggerFactory.getLogger(getClass)
+  // Logger removed - using println for simplicity
   
   // Thread-safe storage for registered PDF hashes
   // In production, this would be persisted and synchronized
   private val registeredHashes = TrieMap.empty[String, Long]
   
   override def transactionValidator: Option[CustomContextualTransactionValidator] = Some {
-    (hashedTransaction: Hashed[Transaction], context: TransactionValidatorContext) =>
+    (hashedTransaction: Hashed[Transaction], _: TransactionValidatorContext) =>
       
       val tx = hashedTransaction.signed.value
       
@@ -36,8 +38,8 @@ object Main extends CurrencyL1App(
       // We identify PDF registrations by specific patterns in the transaction
       
       // Check if this is a PDF registration (0 amount transfers to a specific address pattern)
-      val isPDFRegistration = tx.amount.value == 0L && 
-                             tx.destination.value.startsWith("DAG8") // PDF registry address prefix
+      val isPDFRegistration = tx.amount.value.value == 0L && 
+                             tx.destination.value.value.startsWith("DAG8") // PDF registry address prefix
       
       if (isPDFRegistration) {
         // Extract PDF hash from transaction data
@@ -58,7 +60,7 @@ object Main extends CurrencyL1App(
             else {
               // Register the hash
               registeredHashes.put(pdfHash, System.currentTimeMillis())
-              logger.info(s"Registered PDF with hash: $pdfHash")
+              println(s"Registered PDF with hash: $pdfHash") // Using println instead of logger
               Right(hashedTransaction)
             }
             
@@ -76,8 +78,8 @@ object Main extends CurrencyL1App(
   private def extractPDFHash(tx: Transaction): Option[String] = {
     // Mock implementation - extracts hash from salt field for testing
     // Real implementation would use proper data encoding
-    if (tx.salt > 0) {
-      Some(f"${tx.salt}%064x") // Convert to 64-char hex string
+    if (tx.salt.value > 0) {
+      Some(f"${tx.salt.value}%064x") // Convert to 64-char hex string
     } else {
       None
     }
