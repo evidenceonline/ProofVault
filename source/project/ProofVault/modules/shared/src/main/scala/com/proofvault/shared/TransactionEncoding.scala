@@ -98,7 +98,7 @@ object TransactionEncoding {
     // Create a deterministic address based on the PDF hash
     // This helps with querying and organization
     // Use a fixed valid DAG address for now
-    Address("DAG8" + "0" * 36)
+    Address("DAG8000000000000000000000000000000000000000")
   }
   
   /**
