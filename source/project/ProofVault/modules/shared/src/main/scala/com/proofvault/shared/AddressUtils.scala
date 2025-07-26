@@ -1,8 +1,6 @@
 package com.proofvault.shared
 
 import org.tessellation.schema.address.Address
-import java.security.MessageDigest
-import scala.util.{Try, Success, Failure}
 
 /**
  * Utilities for creating valid DAG addresses based on Constellation Network format
@@ -47,7 +45,7 @@ object AddressUtils {
    * 4. Calculate check digit from hash
    * 5. Combine: "DAG" + checkDigit + base58Hash
    */
-  def createFromPublicKey(publicKey: String): Either[String, Address] = {
+  def createFromPublicKey(_publicKey: String): Either[String, Address] = {
     Left("Address creation from public key not yet implemented")
   }
 
@@ -62,18 +60,7 @@ object AddressUtils {
     address.drop(4).forall(c => BASE58_ALPHABET.contains(c)) // Base58 chars
   }
 
-  /**
-   * Future implementation: Calculate check digit for address
-   */
-  private def calculateCheckDigit(hash: String): Int = {
-    // Real implementation would sum digits and calculate modulo
-    0 // Placeholder
-  }
-
-  /**
-   * Future implementation: Base58 encoding
-   */
-  private def encodeBase58(data: Array[Byte]): String = {
-    "placeholder" // Real Base58 encoding implementation needed
-  }
+  // Future implementation methods removed to avoid unused warnings
+  // - calculateCheckDigit: Calculate check digit for address
+  // - encodeBase58: Base58 encoding implementation
 }

@@ -95,7 +95,7 @@ object TransactionEncoding {
   /**
    * Generate a deterministic registry address for a PDF hash
    */
-  def generateRegistryAddress(pdfHash: String): Address = {
+  def generateRegistryAddress(_pdfHash: String): Address = {
     // Create a deterministic address based on the PDF hash
     // This helps with querying and organization
     // TODO: Implement proper deterministic address generation based on Base58 format
