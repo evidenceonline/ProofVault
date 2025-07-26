@@ -1,12 +1,9 @@
 package com.proofvault.shared
 
 import cats.effect.Sync
-import cats.implicits._
-import io.circe.parser._
 import io.circe.syntax._
 import org.tessellation.schema.address.Address
-import org.tessellation.schema.transaction.{Transaction, TransactionReference}
-import org.tessellation.security.signature.Signed
+import org.tessellation.schema.transaction.{Transaction, TransactionReference, TransactionAmount, TransactionFee, TransactionSalt}
 import eu.timepit.refined.auto._
 import eu.timepit.refined.types.numeric.NonNegLong
 import java.nio.charset.StandardCharsets
@@ -100,8 +97,8 @@ object TransactionEncoding {
   def generateRegistryAddress(pdfHash: String): Address = {
     // Create a deterministic address based on the PDF hash
     // This helps with querying and organization
-    val truncatedHash = pdfHash.take(36)
-    Address(s"$PDF_REGISTRY_PREFIX$truncatedHash")
+    // Use a fixed valid DAG address for now
+    Address("DAG88888888888888888888888888888888888888")
   }
   
   /**
@@ -109,9 +106,10 @@ object TransactionEncoding {
    */
   def decodePDFHash(tx: Transaction): Option[String] = {
     // Check if this is a PDF registration transaction
-    if (tx.destination.value.startsWith(PDF_REGISTRY_PREFIX) && tx.amount.value == 0L) {
+    if (tx.destination.value.value.startsWith(PDF_REGISTRY_PREFIX) && tx.amount.value.value == 0L) {
       // Extract hash from destination address
-      val hashPart = tx.destination.value.drop(PDF_REGISTRY_PREFIX.length)
+      val addressValue = tx.destination.value.value
+      val hashPart = addressValue.drop(PDF_REGISTRY_PREFIX.length)
       
       // In production, properly decode from salt + destination
       if (hashPart.length >= 36) {
@@ -139,10 +137,10 @@ object TransactionEncoding {
         Transaction(
           source = params.source,
           destination = params.destination,
-          amount = params.amount,
-          fee = params.fee,
+          amount = TransactionAmount(params.amount),
+          fee = TransactionFee(params.fee),
           parent = parentRef,
-          salt = params.salt
+          salt = TransactionSalt(params.salt)
         )
       }
     )
@@ -180,7 +178,6 @@ object ChainedTransactionEncoding {
    */
   def encodeAsTransactionChain(
     registration: PDFRegistrationData,
-    sourceAddress: Address,
     maxDataPerTx: Int = 64
   ): List[TransactionFragment] = {
     
