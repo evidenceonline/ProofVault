@@ -1,9 +1,7 @@
 package com.proofvault.shared.compatibility
 
 import cats.data.NonEmptyList
-import cats.effect.{Async, IO}
 import cats.data.EitherT
-import org.tessellation.schema.address.Address
 import org.tessellation.security.signature.Signed
 import org.http4s.HttpRoutes
 
@@ -45,16 +43,16 @@ object DataApplicationCompat {
   type DataApplicationValidationError = com.proofvault.shared.compatibility.DataApplicationValidationError
   type L1NodeContext[F[_]] = com.proofvault.shared.compatibility.L1NodeContext[F]
   
-  // IO type that supports error handling - use EitherT
-  type IO[E, A] = EitherT[cats.effect.IO, E, A]
+  // Use standard cats.effect.IO and handle errors via exceptions
+  type IO[E, A] = cats.effect.IO[A]
   
   val DataApplicationValidationError = com.proofvault.shared.compatibility.DataApplicationValidationError
   
   // Helper methods for IO
   object IO {
-    def pure[E, A](a: A): IO[E, A] = EitherT.rightT[cats.effect.IO, E](a)
-    def unit[E]: IO[E, Unit] = pure[E, Unit](())
-    def raiseError[E, A](e: E): IO[E, A] = EitherT.leftT[cats.effect.IO, A](e)
+    def pure[E, A](a: A): IO[E, A] = cats.effect.IO.pure(a)
+    def unit[E]: IO[E, Unit] = cats.effect.IO.unit
+    def raiseError[E, A](e: E): IO[E, A] = cats.effect.IO.raiseError(new RuntimeException(e.toString))
   }
 }
 
