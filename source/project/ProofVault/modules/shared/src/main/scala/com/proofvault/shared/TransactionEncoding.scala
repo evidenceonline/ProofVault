@@ -8,6 +8,7 @@ import eu.timepit.refined.auto._
 import eu.timepit.refined.types.numeric.{NonNegLong, PosLong}
 import java.nio.charset.StandardCharsets
 import java.util.Base64
+import com.proofvault.shared.AddressUtils
 
 /**
  * Utilities for encoding PDF registration data into standard transactions
@@ -97,8 +98,9 @@ object TransactionEncoding {
   def generateRegistryAddress(pdfHash: String): Address = {
     // Create a deterministic address based on the PDF hash
     // This helps with querying and organization
-    // Use a fixed valid DAG address for now
-    Address("DAG0000000000000000000000000000000000000000")
+    AddressUtils.createFromHash(pdfHash).getOrElse(
+      AddressUtils.TestAddresses.registry
+    )
   }
   
   /**
