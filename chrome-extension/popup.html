@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProofVault</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>ProofVault</h2>
+        </div>
+        
+        <div class="form-container">
+            <div class="input-group">
+                <label for="company">Company</label>
+                <input type="text" id="company" placeholder="Enter company name" required>
+            </div>
+            
+            <div class="input-group">
+                <label for="user">User</label>
+                <input type="text" id="user" placeholder="Enter user name" required>
+            </div>
+            
+            <button id="vaultBtn" class="vault-button">Vault it!</button>
+        </div>
+        
+        <div id="status" class="status hidden"></div>
+        <div id="result" class="result hidden">
+            <p>PDF Generated!</p>
+            <p>ID: <span id="generatedId"></span></p>
+            <button id="downloadBtn" class="download-button">Download PDF</button>
+        </div>
+    </div>
+    
+    <script src="jspdf.umd.min.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>

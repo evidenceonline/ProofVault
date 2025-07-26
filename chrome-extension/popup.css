@@ -1,0 +1,128 @@
+body {
+    width: 300px;
+    min-height: 200px;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #2c5f7d;
+    color: white;
+}
+
+.container {
+    padding: 20px;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.input-group label {
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.input-group input {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: white;
+    color: #333;
+}
+
+.input-group input:focus {
+    outline: 2px solid #4a9eff;
+    outline-offset: 2px;
+}
+
+.vault-button {
+    background-color: #4a4a4a;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.2s;
+}
+
+.vault-button:hover {
+    background-color: #333;
+}
+
+.vault-button:disabled {
+    background-color: #666;
+    cursor: not-allowed;
+}
+
+.status {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #4a9eff;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 12px;
+}
+
+.result {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #5a8a5a;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.result p {
+    margin: 5px 0;
+    font-size: 12px;
+}
+
+.download-button {
+    background-color: #4a9eff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.2s;
+}
+
+.download-button:hover {
+    background-color: #3a7fe0;
+}
+
+.hidden {
+    display: none;
+}
+
+.error {
+    background-color: #d73527;
+}
+
+.loading {
+    background-color: #ff9500;
+}

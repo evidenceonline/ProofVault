@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "ProofVault",
+  "version": "1.0",
+  "description": "Take screenshots and create proof PDFs with company and user information",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ProofVault"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}
