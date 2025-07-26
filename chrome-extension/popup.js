@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function viewOnline() {
         if (currentId) {
-            const viewUrl = `${API_CONFIG.BASE_URL}/pdf/${currentId}`;
+            const viewUrl = `http://proofvault.net:3002/?search=${currentId}`;
             chrome.tabs.create({ url: viewUrl });
         }
     }
