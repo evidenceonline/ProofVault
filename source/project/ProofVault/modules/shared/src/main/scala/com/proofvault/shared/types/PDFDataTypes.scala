@@ -1,7 +1,7 @@
 package com.proofvault.shared.types
 
 import cats.implicits._
-import cats.{Applicative, Monad}
+import cats.Monad
 import derevo.cats.{eqv, show}
 import derevo.circe.magnolia.{decoder, encoder}
 import derevo.derive
@@ -109,7 +109,7 @@ object PDFDataApplication extends DataApplication[
   override def validateUpdate(
     state: DataState[PDFState, PDFUpdate],
     update: PDFUpdate
-  )(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, Unit] = 
+  )(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, Unit] = 
     update match {
       case RegisterPDF(hash, url, title, timestamp, _, _) =>
         for {
@@ -123,7 +123,7 @@ object PDFDataApplication extends DataApplication[
   override def validateData(
     state: DataState[PDFState, PDFUpdate],
     updates: NonEmptyList[Signed[PDFUpdate]]
-  )(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, Unit] = 
+  )(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, Unit] = 
     updates.traverse_ { signedUpdate =>
       validateUpdate(state, signedUpdate.value)
     }
@@ -131,7 +131,7 @@ object PDFDataApplication extends DataApplication[
   override def combine(
     state: DataState[PDFState, PDFUpdate],
     updates: List[Signed[PDFUpdate]]
-  )(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, PDFState] = 
+  )(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, PDFState] = 
     IO.pure {
       updates.foldLeft(state.asInstanceOf[PDFState]) { (acc, signedUpdate) =>
         acc.applyUpdate(signedUpdate.value)
@@ -140,12 +140,12 @@ object PDFDataApplication extends DataApplication[
     
   override def getCalculatedState(
     state: DataState[PDFState, PDFUpdate]
-  )(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, PDFCalculatedState] = 
+  )(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, PDFCalculatedState] = 
     IO.pure(PDFCalculatedState.from(state.asInstanceOf[PDFState], SnapshotOrdinal(NonNegLong.unsafeFrom(context.getLastSnapshot.ordinal))))
     
   override def hashCalculatedState(
     state: DataCalculatedState
-  )(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, Hash] = 
+  )(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, Hash] = 
     IO.pure(Hash.empty) // Implement proper hashing
     
   override def serializeState(
@@ -166,11 +166,11 @@ object PDFDataApplication extends DataApplication[
   override def deserializeUpdate(
     bytes: Array[Byte]
   ): IO[DataApplicationValidationError, PDFUpdate] = 
-    IO.pure(RegisterPDF("", "", "", 0L, Address("DAG0000000000000000000000000000000000000000"), "")) // Implement deserialization
+    IO.pure(RegisterPDF("", "", "", 0L, Address("DAG0000000000000000000000000000000000000"), "")) // Implement deserialization
     
   override def getOnChainState(
     state: DataState[PDFState, PDFUpdate]
-  )(implicit context: L1NodeContext[_]): IO[DataApplicationValidationError, PDFOnChainState] = {
+  )(implicit context: L1NodeContext[Any]): IO[DataApplicationValidationError, PDFOnChainState] = {
     val pdfState = state.asInstanceOf[PDFState]
     val lastHash = pdfState.registeredPDFs.values.toList
       .sortBy(_.captureTimestamp)
