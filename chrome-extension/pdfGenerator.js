@@ -333,16 +333,27 @@ class PdfGenerator {
         
         // Add position information for context
         if (screenshots.length > 1) {
-          this.doc.setFontSize(this.options.fontSize.small);
-          this.doc.setFont(undefined, 'normal');
-          this.doc.setTextColor(100);
-          
-          const positionText = `Page position: X=${screenshot.position?.x || 0}px, Y=${screenshot.position?.y || 0}px`;
-          this.doc.text(positionText, this.options.margin, this.currentY);
-          this.currentY += 8;
-          
-          // Reset text color
-          this.doc.setTextColor(0);
+          try {
+            this.doc.setFontSize(this.options.fontSize.small || 10);
+            this.doc.setFont(undefined, 'normal');
+            this.doc.setTextColor(100);
+            
+            const positionText = `Section ${screenshot.sectionIndex || i + 1} - Position: X=${screenshot.position?.x || 0}px, Y=${screenshot.position?.y || 0}px`;
+            
+            // Ensure currentY is valid
+            if (!this.currentY || this.currentY < this.options.margin) {
+              this.currentY = this.options.margin + 10;
+            }
+            
+            this.doc.text(positionText, this.options.margin, this.currentY);
+            this.currentY += 8;
+            
+            // Reset text color
+            this.doc.setTextColor(0);
+          } catch (textError) {
+            console.warn('Failed to add position text:', textError);
+            // Continue without position text
+          }
         }
         
         // Process and add the screenshot
