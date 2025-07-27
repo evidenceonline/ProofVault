@@ -38,9 +38,18 @@ class PdfGenerator {
     
     try {
       console.log('Starting PDF generation...');
+      console.log('Screenshot data type:', typeof screenshotData);
+      console.log('Is multiple screenshots:', screenshotData?.isMultipleScreenshots);
+      console.log('Number of screenshots:', screenshotData?.screenshots?.length);
       
       // Initialize PDF document
       this.initializePdf();
+      
+      // Verify initialization was successful
+      if (!this.doc) {
+        throw new Error('PDF initialization failed - document is null after initialization');
+      }
+      console.log('PDF document initialized successfully');
       
       // Set metadata
       this.setMetadata(company, user, id, url, title);
@@ -119,6 +128,11 @@ class PdfGenerator {
         creator: 'ProofVault Chrome Extension',
         producer: 'ProofVault PDF Generator v1.0'
       });
+      
+      // Validate that the PDF document was created successfully
+      if (!this.doc) {
+        throw new Error('PDF document creation failed - jsPDF returned null/undefined');
+      }
       
       console.log(`PDF initialized: ${this.pageWidth}x${this.pageHeight}${this.options.unit}`);
       
@@ -311,7 +325,11 @@ class PdfGenerator {
       for (let i = 0; i < screenshots.length; i++) {
         const screenshot = screenshots[i];
         
-        // Add section header
+        // Add section header - ensure doc is still valid
+        if (!this.doc) {
+          throw new Error('PDF document is null - initialization may have failed');
+        }
+        
         this.doc.setFontSize(this.options.fontSize.header);
         this.doc.setFont(undefined, 'bold');
         
@@ -323,6 +341,10 @@ class PdfGenerator {
         }
         
         // Check if we need a new page
+        if (!this.doc) {
+          throw new Error('PDF document became null during processing');
+        }
+        
         if (this.currentY > this.doc.internal.pageSize.height - 100) {
           this.doc.addPage();
           this.currentY = this.options.margin;
@@ -332,7 +354,7 @@ class PdfGenerator {
         this.currentY += 10;
         
         // Add position information for context
-        if (screenshots.length > 1) {
+        if (screenshots.length > 1 && this.doc) {
           try {
             this.doc.setFontSize(this.options.fontSize.small || 10);
             this.doc.setFont(undefined, 'normal');
@@ -345,11 +367,13 @@ class PdfGenerator {
               this.currentY = this.options.margin + 10;
             }
             
-            this.doc.text(positionText, this.options.margin, this.currentY);
-            this.currentY += 8;
-            
-            // Reset text color
-            this.doc.setTextColor(0);
+            if (this.doc) {
+              this.doc.text(positionText, this.options.margin, this.currentY);
+              this.currentY += 8;
+              
+              // Reset text color
+              this.doc.setTextColor(0);
+            }
           } catch (textError) {
             console.warn('Failed to add position text:', textError);
             // Continue without position text
@@ -385,22 +409,24 @@ class PdfGenerator {
         }
         
         // Add image to PDF
-        if (this.doc) {
-          this.doc.addImage(
-            imageData.dataUrl,
-            'PNG',
-            this.options.margin,
-            this.currentY,
-            imgDimensions.width,
-            imgDimensions.height,
-            undefined,
-            'FAST'
-          );
-          
-          this.currentY += imgDimensions.height + 10;
-          
-          console.log(`Screenshot ${i + 1}/${screenshots.length} added: ${imgDimensions.width}x${imgDimensions.height}mm`);
+        if (!this.doc) {
+          throw new Error('PDF document became null during image addition');
         }
+        
+        this.doc.addImage(
+          imageData.dataUrl,
+          'PNG',
+          this.options.margin,
+          this.currentY,
+          imgDimensions.width,
+          imgDimensions.height,
+          undefined,
+          'FAST'
+        );
+        
+        this.currentY += imgDimensions.height + 10;
+        
+        console.log(`Screenshot ${i + 1}/${screenshots.length} added: ${imgDimensions.width}x${imgDimensions.height}mm`);
         
         // Add some spacing between screenshots
         if (i < screenshots.length - 1) {
@@ -409,7 +435,12 @@ class PdfGenerator {
       }
       
       // Add summary information
-      if (screenshots.length > 1 && this.doc) {
+      if (screenshots.length > 1) {
+        if (!this.doc) {
+          console.warn('PDF document is null - skipping summary section');
+          return;
+        }
+        
         try {
           this.currentY += 10;
           this.doc.setFontSize(this.options.fontSize.small || 10);
@@ -441,11 +472,22 @@ class PdfGenerator {
     } catch (error) {
       console.error('Multiple screenshots processing failed:', error);
       
-      // Add error note instead of images
-      this.doc.setFontSize(this.options.fontSize.body);
-      this.doc.setTextColor(220, 53, 69);
-      this.doc.text('Screenshots could not be processed', this.options.margin, this.currentY);
-      this.currentY += 10;
+      // Add error note instead of images - but only if doc is still valid
+      if (this.doc) {
+        try {
+          this.doc.setFontSize(this.options.fontSize.body);
+          this.doc.setTextColor(220, 53, 69);
+          this.doc.text('Screenshots could not be processed', this.options.margin, this.currentY);
+          this.currentY += 10;
+        } catch (errorTextError) {
+          console.error('Failed to add error text to PDF:', errorTextError);
+          // Re-throw the original error since we can't even add error text
+          throw error;
+        }
+      } else {
+        // If doc is null, we can't recover - re-throw the error
+        throw error;
+      }
     }
   }
 

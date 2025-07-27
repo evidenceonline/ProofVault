@@ -18,10 +18,8 @@
  */
 
 console.log('[POPUP] Script loading started');
-alert('[DEBUG] PopupJS script is loading!');
 
 document.addEventListener('DOMContentLoaded', function() {
-    alert('[DEBUG] DOM content loaded!');
     console.log('[POPUP] DOM content loaded');
     // Element references
     const companyInput = document.getElementById('company');
