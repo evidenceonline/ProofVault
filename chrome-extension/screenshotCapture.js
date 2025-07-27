@@ -32,11 +32,14 @@ class ScreenshotCapture {
       this.canvas = document.createElement('canvas');
       this.context = this.canvas.getContext('2d', {
         alpha: false,
-        desynchronized: true,
-        willReadFrequently: false
+        desynchronized: false, // Changed for better quality
+        willReadFrequently: true, // Changed since we read for toDataURL
+        colorSpace: 'srgb',
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: 'high'
       });
       
-      // Optimize canvas for better performance
+      // Optimize canvas for better quality
       this.context.imageSmoothingEnabled = true;
       this.context.imageSmoothingQuality = 'high';
       
@@ -311,31 +314,60 @@ class ScreenshotCapture {
       const dimensions = await this.getPageDimensions(tab);
       console.log('[FULLPAGE] Page dimensions:', dimensions);
       
+      // Use device pixel ratio for high quality capture
+      const devicePixelRatio = dimensions.devicePixelRatio || 1;
+      
+      // Calculate actual page dimensions considering device pixel ratio
+      const actualWidth = dimensions.fullWidth;
+      const actualHeight = dimensions.fullHeight;
+      const viewportWidth = dimensions.viewportWidth;
+      const viewportHeight = dimensions.viewportHeight;
+      
       // Calculate number of captures needed
-      const capturesX = Math.ceil(dimensions.fullWidth / dimensions.viewportWidth);
-      const capturesY = Math.ceil(dimensions.fullHeight / dimensions.viewportHeight);
+      const capturesX = Math.ceil(actualWidth / viewportWidth);
+      const capturesY = Math.ceil(actualHeight / viewportHeight);
       const totalCaptures = capturesX * capturesY;
       
       console.log(`Will capture ${capturesX}x${capturesY} = ${totalCaptures} screenshots`);
+      console.log(`Device pixel ratio: ${devicePixelRatio}`);
       
       // Prepare page for capture
       await chrome.tabs.sendMessage(tab.id, { action: 'prepareForCapture' });
       
-      // Initialize canvas for stitching
+      // Initialize canvas for stitching with proper dimensions
       this.initializeCanvas();
-      this.canvas.width = Math.min(dimensions.fullWidth, options.maxWidth || 1920);
-      this.canvas.height = Math.min(dimensions.fullHeight, options.maxHeight || 10800);
       
-      const scaleX = this.canvas.width / dimensions.fullWidth;
-      const scaleY = this.canvas.height / dimensions.fullHeight;
-      const scale = Math.min(scaleX, scaleY, 1);
+      // Calculate output dimensions maintaining aspect ratio
+      const maxWidth = options.maxWidth || 1920;
+      const maxHeight = options.maxHeight || 10800;
+      
+      let outputWidth = actualWidth;
+      let outputHeight = actualHeight;
+      
+      // Scale down if needed while maintaining aspect ratio
+      if (outputWidth > maxWidth || outputHeight > maxHeight) {
+        const widthRatio = maxWidth / outputWidth;
+        const heightRatio = maxHeight / outputHeight;
+        const scale = Math.min(widthRatio, heightRatio);
+        
+        outputWidth = Math.floor(outputWidth * scale);
+        outputHeight = Math.floor(outputHeight * scale);
+      }
+      
+      this.canvas.width = outputWidth;
+      this.canvas.height = outputHeight;
+      
+      console.log(`Canvas dimensions: ${this.canvas.width}x${this.canvas.height}`);
+      console.log(`Original dimensions: ${actualWidth}x${actualHeight}`);
       
       // Capture all sections
       let captureCount = 0;
+      const scale = this.canvas.width / actualWidth; // Calculate scale factor
+      
       for (let y = 0; y < capturesY; y++) {
         for (let x = 0; x < capturesX; x++) {
-          const scrollX = x * dimensions.viewportWidth;
-          const scrollY = y * dimensions.viewportHeight;
+          const scrollX = x * viewportWidth;
+          const scrollY = y * viewportHeight;
           
           // Scroll to position
           await chrome.tabs.sendMessage(tab.id, { 
@@ -344,19 +376,31 @@ class ScreenshotCapture {
             y: scrollY 
           });
           
-          // Wait for scroll to settle
-          await this.delay(200);
+          // Wait for scroll to settle and any lazy-loaded content
+          await this.delay(300);
           
-          // Capture visible area
-          const dataUrl = await this.performCapture(tab, options);
+          // Capture visible area with high quality
+          const dataUrl = await this.performCapture(tab, {
+            ...options,
+            format: 'png', // Use PNG for better quality during stitching
+            quality: 100
+          });
+          
+          // Calculate destination coordinates on canvas
+          const destX = Math.floor(scrollX * scale);
+          const destY = Math.floor(scrollY * scale);
+          const destWidth = Math.floor(viewportWidth * scale);
+          const destHeight = Math.floor(viewportHeight * scale);
           
           // Draw captured section to canvas
           await this.drawSectionToCanvas(
             dataUrl,
-            scrollX * scale,
-            scrollY * scale,
-            dimensions.viewportWidth * scale,
-            dimensions.viewportHeight * scale
+            destX,
+            destY,
+            destWidth,
+            destHeight,
+            // Source dimensions (what to extract from the captured image)
+            0, 0, viewportWidth, viewportHeight
           );
           
           captureCount++;
@@ -367,10 +411,13 @@ class ScreenshotCapture {
       // Restore page state
       await chrome.tabs.sendMessage(tab.id, { action: 'restorePageState' });
       
-      // Generate final image
+      // Generate final image with high quality
+      const outputFormat = options.format || 'png';
+      const outputQuality = outputFormat === 'jpeg' ? (options.quality || 95) / 100 : 1.0;
+      
       const fullPageDataUrl = this.canvas.toDataURL(
-        `image/${options.format || 'png'}`,
-        options.format === 'jpeg' ? (options.quality || 95) / 100 : undefined
+        `image/${outputFormat}`,
+        outputQuality
       );
       
       const endTime = performance.now();
@@ -451,14 +498,29 @@ class ScreenshotCapture {
   /**
    * Draw a captured section to the stitching canvas
    */
-  async drawSectionToCanvas(dataUrl, x, y, width, height) {
+  async drawSectionToCanvas(dataUrl, destX, destY, destWidth, destHeight, srcX = 0, srcY = 0, srcWidth = null, srcHeight = null) {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
         try {
-          this.context.drawImage(img, x, y, width, height);
+          // Enable high quality image rendering
+          this.context.imageSmoothingEnabled = true;
+          this.context.imageSmoothingQuality = 'high';
+          
+          if (srcWidth && srcHeight) {
+            // Draw with source rectangle (for proper scaling)
+            this.context.drawImage(
+              img, 
+              srcX, srcY, srcWidth, srcHeight,  // Source rectangle
+              destX, destY, destWidth, destHeight // Destination rectangle
+            );
+          } else {
+            // Draw entire image
+            this.context.drawImage(img, destX, destY, destWidth, destHeight);
+          }
           resolve();
         } catch (error) {
+          console.error('[FULLPAGE] Error drawing section:', error);
           reject(error);
         }
       };
