@@ -579,27 +579,44 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get browser-specific screenshot options
             const browserOptions = browserCompatibility.getScreenshotOptions();
             
-            const result = await screenshotCapture.captureScreenshot(tab, {
+            // Try full page capture first
+            const result = await screenshotCapture.captureFullPage(tab, {
                 ...browserOptions,
                 maxWidth: 1920,
-                maxHeight: 10800
+                maxHeight: 10800,
+                format: 'png',
+                quality: 95
             });
             
-            console.log('Screenshot captured with metadata:', result.metadata);
+            console.log('Full page screenshot captured with metadata:', result.metadata);
             return result.dataUrl;
         } catch (error) {
-            console.error('Enhanced screenshot capture failed:', error);
+            console.error('Full page capture failed, trying visible area:', error);
             
-            // Fallback to basic capture if enhanced capture fails
-            return new Promise((resolve, reject) => {
-                chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' }, function(dataUrl) {
-                    if (chrome.runtime.lastError) {
-                        reject(new Error(chrome.runtime.lastError.message));
-                    } else {
-                        resolve(dataUrl);
-                    }
+            try {
+                // Fallback to visible area capture
+                const result = await screenshotCapture.captureScreenshot(tab, {
+                    ...browserOptions,
+                    maxWidth: 1920,
+                    maxHeight: 10800
                 });
-            });
+                
+                console.log('Visible area screenshot captured with metadata:', result.metadata);
+                return result.dataUrl;
+            } catch (fallbackError) {
+                console.error('Enhanced screenshot capture failed:', fallbackError);
+                
+                // Final fallback to basic capture
+                return new Promise((resolve, reject) => {
+                    chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' }, function(dataUrl) {
+                        if (chrome.runtime.lastError) {
+                            reject(new Error(chrome.runtime.lastError.message));
+                        } else {
+                            resolve(dataUrl);
+                        }
+                    });
+                });
+            }
         }
     }
 

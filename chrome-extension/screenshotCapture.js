@@ -295,13 +295,164 @@ class ScreenshotCapture {
   }
 
   /**
-   * Capture full page screenshot (experimental)
+   * Capture full page screenshot by scrolling and stitching
    */
   async captureFullPage(tab, options = {}) {
-    // This would require content script injection for full page capture
-    // For now, return regular visible tab capture
-    console.warn('Full page capture not yet implemented, using visible tab capture');
-    return this.captureScreenshot(tab, options);
+    console.log('Starting full page capture for tab:', tab.id);
+    const startTime = performance.now();
+    
+    try {
+      // Inject content script if needed
+      await this.injectContentScript(tab);
+      
+      // Get page dimensions
+      const dimensions = await this.getPageDimensions(tab);
+      console.log('Page dimensions:', dimensions);
+      
+      // Calculate number of captures needed
+      const capturesX = Math.ceil(dimensions.fullWidth / dimensions.viewportWidth);
+      const capturesY = Math.ceil(dimensions.fullHeight / dimensions.viewportHeight);
+      const totalCaptures = capturesX * capturesY;
+      
+      console.log(`Will capture ${capturesX}x${capturesY} = ${totalCaptures} screenshots`);
+      
+      // Prepare page for capture
+      await chrome.tabs.sendMessage(tab.id, { action: 'prepareForCapture' });
+      
+      // Initialize canvas for stitching
+      this.initializeCanvas();
+      this.canvas.width = Math.min(dimensions.fullWidth, options.maxWidth || 1920);
+      this.canvas.height = Math.min(dimensions.fullHeight, options.maxHeight || 10800);
+      
+      const scaleX = this.canvas.width / dimensions.fullWidth;
+      const scaleY = this.canvas.height / dimensions.fullHeight;
+      const scale = Math.min(scaleX, scaleY, 1);
+      
+      // Capture all sections
+      let captureCount = 0;
+      for (let y = 0; y < capturesY; y++) {
+        for (let x = 0; x < capturesX; x++) {
+          const scrollX = x * dimensions.viewportWidth;
+          const scrollY = y * dimensions.viewportHeight;
+          
+          // Scroll to position
+          await chrome.tabs.sendMessage(tab.id, { 
+            action: 'scrollToPosition', 
+            x: scrollX, 
+            y: scrollY 
+          });
+          
+          // Wait for scroll to settle
+          await this.delay(200);
+          
+          // Capture visible area
+          const dataUrl = await this.performCapture(tab, options);
+          
+          // Draw captured section to canvas
+          await this.drawSectionToCanvas(
+            dataUrl,
+            scrollX * scale,
+            scrollY * scale,
+            dimensions.viewportWidth * scale,
+            dimensions.viewportHeight * scale
+          );
+          
+          captureCount++;
+          console.log(`Captured ${captureCount}/${totalCaptures} sections`);
+        }
+      }
+      
+      // Restore page state
+      await chrome.tabs.sendMessage(tab.id, { action: 'restorePageState' });
+      
+      // Generate final image
+      const fullPageDataUrl = this.canvas.toDataURL(
+        `image/${options.format || 'png'}`,
+        options.format === 'jpeg' ? (options.quality || 95) / 100 : undefined
+      );
+      
+      const endTime = performance.now();
+      console.log(`Full page capture completed in ${Math.round(endTime - startTime)}ms`);
+      
+      return {
+        dataUrl: fullPageDataUrl,
+        metadata: {
+          captureTime: new Date().toISOString(),
+          processingTime: Math.round(endTime - startTime),
+          format: options.format || 'png',
+          quality: options.quality || 95,
+          fullPageCapture: true,
+          dimensions: {
+            full: { width: dimensions.fullWidth, height: dimensions.fullHeight },
+            captured: { width: this.canvas.width, height: this.canvas.height },
+            scale: scale
+          },
+          tabInfo: {
+            id: tab.id,
+            url: tab.url,
+            title: tab.title,
+            windowId: tab.windowId
+          }
+        }
+      };
+      
+    } catch (error) {
+      console.error('Full page capture failed:', error);
+      // Fallback to visible tab capture
+      console.warn('Falling back to visible tab capture');
+      return this.captureScreenshot(tab, options);
+    }
+  }
+  
+  /**
+   * Inject content script into tab
+   */
+  async injectContentScript(tab) {
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['content-capture.js']
+      });
+      // Give script time to initialize
+      await this.delay(100);
+    } catch (error) {
+      console.warn('Content script injection failed:', error);
+      // Script might already be injected
+    }
+  }
+  
+  /**
+   * Get page dimensions via content script
+   */
+  async getPageDimensions(tab) {
+    return new Promise((resolve, reject) => {
+      chrome.tabs.sendMessage(tab.id, { action: 'getPageDimensions' }, response => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve(response);
+        }
+      });
+    });
+  }
+  
+  /**
+   * Draw a captured section to the stitching canvas
+   */
+  async drawSectionToCanvas(dataUrl, x, y, width, height) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          this.context.drawImage(img, x, y, width, height);
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      };
+      img.onerror = () => reject(new Error('Failed to load section image'));
+      img.src = dataUrl;
+    });
   }
 
   /**
