@@ -359,10 +359,15 @@ class PdfGenerator {
         // Process and add the screenshot
         const imageData = await this.processImageForPdf(screenshot.dataUrl);
         
-        // Calculate optimal image dimensions
-        const imgDimensions = this.calculateOptimalImageDimensions(
+        // Calculate optimal image dimensions for PDF
+        const maxWidth = this.options.maxImageWidth || 170; // mm
+        const maxHeight = this.options.maxImageHeight || 240; // mm
+        
+        const imgDimensions = this.calculateOptimalDimensions(
           imageData.width,
-          imageData.height
+          imageData.height,
+          maxWidth,
+          maxHeight
         );
         
         // Check if image fits on current page
