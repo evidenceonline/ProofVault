@@ -48,12 +48,12 @@ const uploadPDF = async (req, res, next) => {
       const month = now.toLocaleString('en-US', { month: 'long' });
       const file_id = `${company_name}-${year}-${month}`;
 
-      // Insert new PDF record
+      // Insert new PDF record (only columns that exist in the table)
       const result = await client.query(
-        `INSERT INTO pdf_records (company_name, username, pdf_filename, pdf_hash, pdf_data, file_size, status, file_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING id, company_name, username, pdf_filename, pdf_hash, file_size, status, created_at, file_id`,
-        [company_name, username, file.originalname, fileHash, file.buffer, file.size, 'verified', file_id]
+        `INSERT INTO pdf_records (company_name, username, pdf_filename, pdf_hash, pdf_data, file_id)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id, company_name, username, pdf_filename, pdf_hash, created_at, file_id`,
+        [company_name, username, file.originalname, fileHash, file.buffer, file_id]
       );
 
       client.release();
@@ -68,10 +68,10 @@ const uploadPDF = async (req, res, next) => {
           id: newRecord.id,
           company_name: newRecord.company_name,
           username: newRecord.username,
-          pdf_filename: newRecord.pdf_filename,
+          filename: newRecord.pdf_filename,
           pdf_hash: newRecord.pdf_hash,
-          file_size: newRecord.file_size,
-          status: newRecord.status,
+          file_size: file.size, // Use the original file size from multer
+          status: 'verified', // Default status since column doesn't exist
           created_at: newRecord.created_at,
           file_id: newRecord.file_id
         }
