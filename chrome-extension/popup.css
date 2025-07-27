@@ -274,8 +274,15 @@ body {
     transform: translateY(-1px);
 }
 
-.form-input:invalid {
+.form-input:invalid,
+.form-input.error {
     border-color: var(--color-error);
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.form-input.error:focus {
+    border-color: var(--color-error);
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
 }
 
 .input-help {
@@ -304,6 +311,80 @@ body {
     to {
         opacity: 1;
         transform: scale(1);
+    }
+}
+
+/* Error Notification Styles */
+.error-notification {
+    position: fixed;
+    top: var(--space-4);
+    left: var(--space-4);
+    right: var(--space-4);
+    z-index: 1000;
+    background: var(--color-white);
+    border: 2px solid var(--color-error);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    animation: slideInDown 0.3s ease-out;
+}
+
+.error-content {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4);
+}
+
+.error-icon {
+    width: 24px;
+    height: 24px;
+    color: var(--color-error);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.error-text h4 {
+    font-size: 14px;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-error);
+    margin: 0 0 var(--space-1) 0;
+}
+
+.error-text p {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    margin: 0;
+    line-height: 1.4;
+}
+
+.error-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: var(--color-gray-400);
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.error-close:hover {
+    color: var(--color-error);
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
@@ -345,6 +426,30 @@ body {
     cursor: not-allowed;
     transform: none;
     box-shadow: var(--shadow-sm);
+}
+
+.primary-button.loading {
+    opacity: 0.8;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.primary-button .button-spinner {
+    display: none;
+    width: 16px;
+    height: 16px;
+    margin-left: var(--space-2);
+}
+
+.primary-button.loading .button-spinner {
+    display: flex;
+    animation: spin 1s linear infinite;
+}
+
+.primary-button.loading .button-spinner svg {
+    width: 100%;
+    height: 100%;
+    color: currentColor;
 }
 
 .primary-button.outline {

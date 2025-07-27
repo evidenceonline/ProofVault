@@ -5,6 +5,7 @@
   "description": "Professional legal evidence capture and authentication system. Securely capture webpage screenshots and generate authenticated PDF evidence with complete metadata tracking for legal compliance.",
   "permissions": [
     "activeTab",
+    "tabs",
     "storage",
     "scripting",
     "contextMenus"
