@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('SIMPLE: Button clicked!', { company: companyInput.value, user: userInput.value });
             
             // Simple fetch test
-            fetch('http://localhost:3003/api/health')
+            fetch('http://proofvault.net:3003/api/health')
                 .then(response => {
                     alert('SIMPLE: API responded with status ' + response.status);
                     console.log('SIMPLE: API response:', response);
