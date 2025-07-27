@@ -362,17 +362,21 @@ class PdfGenerator {
     let mmWidth = pixelWidth * mmPerPixel;
     let mmHeight = pixelHeight * mmPerPixel;
     
-    // Scale down if exceeds maximum dimensions
-    if (mmWidth > maxWidth) {
-      const ratio = maxWidth / mmWidth;
-      mmWidth = maxWidth;
-      mmHeight = mmHeight * ratio;
-    }
+    // Calculate the aspect ratio
+    const aspectRatio = pixelWidth / pixelHeight;
     
-    if (mmHeight > maxHeight) {
-      const ratio = maxHeight / mmHeight;
-      mmHeight = maxHeight;
-      mmWidth = mmWidth * ratio;
+    // Scale down if exceeds maximum dimensions while maintaining aspect ratio
+    if (mmWidth > maxWidth || mmHeight > maxHeight) {
+      // Calculate scale factors for both dimensions
+      const widthScale = maxWidth / mmWidth;
+      const heightScale = maxHeight / mmHeight;
+      
+      // Use the smaller scale factor to ensure the image fits within bounds
+      const scaleFactor = Math.min(widthScale, heightScale);
+      
+      // Apply the same scale factor to both dimensions
+      mmWidth = mmWidth * scaleFactor;
+      mmHeight = mmHeight * scaleFactor;
     }
     
     return { width: mmWidth, height: mmHeight };

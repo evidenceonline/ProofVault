@@ -674,8 +674,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     const img = new Image();
                     img.onload = function() {
-                        const imgWidth = pageWidth - (margin * 2);
-                        const imgHeight = (img.height * imgWidth) / img.width;
+                        // Calculate image dimensions maintaining aspect ratio
+                        const availableWidth = pageWidth - (margin * 2);
+                        const availableHeight = doc.internal.pageSize.getHeight() - yPos - margin;
+                        
+                        // Calculate scale to fit within available space
+                        const widthScale = availableWidth / img.width;
+                        const heightScale = availableHeight / img.height;
+                        const scale = Math.min(widthScale, heightScale);
+                        
+                        const imgWidth = img.width * scale;
+                        const imgHeight = img.height * scale;
 
                         if (yPos + imgHeight > doc.internal.pageSize.getHeight() - margin) {
                             doc.addPage();

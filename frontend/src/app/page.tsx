@@ -28,7 +28,6 @@ export default function HomePage() {
   const [viewModalData, setViewModalData] = useState<EvidenceRecord | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'created_at', direction: 'desc' });
   const [dateFilter, setDateFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -92,11 +91,6 @@ export default function HomePage() {
       });
     }
 
-    // Apply status filter (currently all records are verified, but ready for expansion)
-    if (statusFilter !== 'all') {
-      // For future use when different statuses are implemented
-      filtered = filtered.filter(record => statusFilter === 'verified');
-    }
 
     // Apply sorting
     if (sortConfig.key) {
@@ -120,7 +114,7 @@ export default function HomePage() {
     }
 
     setFilteredRecords(filtered);
-  }, [records, searchTerm, dateFilter, statusFilter, sortConfig]);
+  }, [records, searchTerm, dateFilter, sortConfig]);
 
   useEffect(() => {
     fetchRecords();
@@ -353,25 +347,6 @@ export default function HomePage() {
                 </div>
               </div>
               
-              <div className="form-group">
-                <label htmlFor="status-filter" className="form-label">
-                  Filter by Status
-                </label>
-                <select
-                  id="status-filter"
-                  className="form-select"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  aria-describedby="status-filter-description"
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="verified">Verified Only</option>
-                  <option value="pending">Pending Only</option>
-                </select>
-                <div id="status-filter-description" className="sr-only">
-                  Filter records by verification status
-                </div>
-              </div>
             </div>
           </div>
         </section>
@@ -440,7 +415,7 @@ export default function HomePage() {
               </div>
               <h3>No Evidence Records Found</h3>
               <p>
-                {searchTerm || dateFilter || statusFilter !== 'all'
+                {searchTerm || dateFilter
                   ? 'No records match your current search criteria. Try adjusting your filters.'
                   : 'No evidence records are currently available in the system.'}
               </p>
