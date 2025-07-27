@@ -1,6 +1,5 @@
 // ProofVault Extension - Full Functionality
 console.log('[PROOFVAULT] Extension loading...');
-alert('[PROOFVAULT] Simple-popup.js is loading!');
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[PROOFVAULT] DOM loaded');
@@ -69,7 +68,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('[PROOFVAULT] Testing API health at:', healthUrl);
             const healthResponse = await fetchWithTimeout(healthUrl, {}, 10000);
             console.log('[PROOFVAULT] Health response:', healthResponse.status, healthResponse.statusText);
-            alert('[DEBUG] Health check passed: ' + healthResponse.status);
             if (!healthResponse.ok) {
                 throw new Error('Cannot connect to ProofVault servers');
             }
@@ -79,14 +77,12 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('[PROOFVAULT] Starting screenshot capture...');
             const screenshotDataUrl = await captureScreenshot();
             console.log('[PROOFVAULT] Screenshot captured, data URL length:', screenshotDataUrl ? screenshotDataUrl.length : 'null');
-            alert('[DEBUG] Screenshot captured, length: ' + (screenshotDataUrl ? screenshotDataUrl.length : 'null'));
             
             // Step 3: Generate PDF
             showStatus('Generating PDF evidence document...', 60);
             console.log('[PROOFVAULT] Starting PDF generation...');
             const pdfBlob = await generatePdf(company, user, screenshotDataUrl);
             console.log('[PROOFVAULT] PDF generated, blob size:', pdfBlob ? pdfBlob.size : 'null');
-            alert('[DEBUG] PDF generated, size: ' + (pdfBlob ? pdfBlob.size : 'null'));
             currentPdfBlob = pdfBlob;
             
             // Step 4: Upload to server
@@ -94,7 +90,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('[PROOFVAULT] Starting PDF upload...');
             const uploadResult = await uploadPdf(pdfBlob, company, user);
             console.log('[PROOFVAULT] Upload result:', uploadResult);
-            alert('[DEBUG] Upload completed: ' + JSON.stringify(uploadResult.data));
             currentId = uploadResult.data.id;
             
             // Step 5: Save to local storage and show success
@@ -117,14 +112,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 statusText: error.statusText
             });
             
-            // Add alert for debugging
-            alert('[DEBUG] Error caught: ' + JSON.stringify({
-                message: error.message,
-                name: error.name,
-                type: typeof error,
-                toString: error.toString(),
-                stack: error.stack ? error.stack.substring(0, 100) : 'no stack'
-            }, null, 2));
             
             const errorMessage = getDetailedErrorMessage(error);
             console.error('[PROOFVAULT] Processed error message:', errorMessage);
@@ -299,7 +286,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     async function uploadPdf(pdfBlob, company, user) {
         try {
-            alert('[DEBUG] Starting upload function - blob size: ' + pdfBlob.size);
             
             // Validate inputs
             if (!pdfBlob || pdfBlob.size === 0) {
@@ -310,7 +296,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error('PDF file is too large (max 10MB)');
             }
             
-            alert('[DEBUG] Creating FormData...');
             const formData = new FormData();
             formData.append('pdf', pdfBlob, `ProofVault_${Date.now()}.pdf`);
             formData.append('company_name', sanitizeForPdf(company));
@@ -318,21 +303,18 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const uploadUrl = API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.UPLOAD_PDF;
             console.log('[PROOFVAULT] Uploading to:', uploadUrl);
-            alert('[DEBUG] About to call fetchWithRetry to: ' + uploadUrl);
             
             const response = await fetchWithRetry(uploadUrl, {
                 method: 'POST',
                 body: formData
             }, 3);
             
-            alert('[DEBUG] fetchWithRetry completed, response status: ' + response.status);
         
         if (!response.ok) {
             let errorMessage = `Upload failed: ${response.status} ${response.statusText}`;
             
             try {
                 const responseText = await response.text();
-                alert('[DEBUG] Server error response: ' + responseText);
                 
                 // Try to parse as JSON
                 const errorData = JSON.parse(responseText);
@@ -343,11 +325,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } catch (e) {
                 // If can't parse as JSON, use the raw text
-                alert('[DEBUG] Could not parse error as JSON: ' + e.message);
                 // errorMessage already set to default above
             }
             
-            alert('[DEBUG] Throwing error with message: ' + errorMessage);
             throw new Error(errorMessage);
         }
         
@@ -360,12 +340,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         return result;
         } catch (error) {
-            alert('[DEBUG] Upload function error: ' + JSON.stringify({
-                message: error.message,
-                name: error.name,
-                type: typeof error,
-                toString: error.toString()
-            }));
             throw error;
         }
     }
@@ -653,15 +627,12 @@ document.addEventListener('DOMContentLoaded', function() {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 console.log(`[PROOFVAULT] API attempt ${attempt}/${maxRetries}`);
-                alert(`[DEBUG] fetchWithRetry attempt ${attempt}/${maxRetries} to ${url}`);
                 
                 const response = await fetchWithTimeout(url, options, 30000);
-                alert(`[DEBUG] fetchWithTimeout returned response with status: ${response.status}`);
                 return response;
             } catch (error) {
                 lastError = error;
                 console.warn(`[PROOFVAULT] Attempt ${attempt} failed:`, error.message);
-                alert(`[DEBUG] Attempt ${attempt} failed: ${error.message}`);
                 
                 if (attempt < maxRetries) {
                     // Wait before retrying (exponential backoff)
@@ -672,11 +643,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        alert('[DEBUG] All retry attempts failed, throwing lastError: ' + JSON.stringify({
-            message: lastError.message,
-            name: lastError.name,
-            type: typeof lastError
-        }));
         
         throw lastError || new Error('All retry attempts failed');
     }

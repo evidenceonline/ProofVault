@@ -48,12 +48,15 @@ const uploadPDF = async (req, res, next) => {
       const month = now.toLocaleString('en-US', { month: 'long' });
       const file_id = `${company_name}-${year}-${month}`;
 
+      // Generate a UUID for the record
+      const recordId = uuidv4();
+      
       // Insert new PDF record (only columns that exist in the table)
       const result = await client.query(
-        `INSERT INTO pdf_records (company_name, username, pdf_filename, pdf_hash, pdf_data, file_id)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO pdf_records (id, company_name, username, pdf_filename, pdf_hash, pdf_data, file_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING id, company_name, username, pdf_filename, pdf_hash, created_at, file_id`,
-        [company_name, username, file.originalname, fileHash, file.buffer, file_id]
+        [recordId, company_name, username, file.originalname, fileHash, file.buffer, file_id]
       );
 
       client.release();

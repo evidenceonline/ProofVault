@@ -21,7 +21,8 @@
       "Bash(npm run dev:*)",
       "Bash(grep:*)",
       "Bash(ls:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(npm test)"
     ],
     "deny": []
   }
