@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('[PROOFVAULT] Testing API health at:', healthUrl);
             const healthResponse = await fetchWithTimeout(healthUrl, {}, 10000);
             console.log('[PROOFVAULT] Health response:', healthResponse.status, healthResponse.statusText);
+            alert('[DEBUG] Health check passed: ' + healthResponse.status);
             if (!healthResponse.ok) {
                 throw new Error('Cannot connect to ProofVault servers');
             }
@@ -78,12 +79,14 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('[PROOFVAULT] Starting screenshot capture...');
             const screenshotDataUrl = await captureScreenshot();
             console.log('[PROOFVAULT] Screenshot captured, data URL length:', screenshotDataUrl ? screenshotDataUrl.length : 'null');
+            alert('[DEBUG] Screenshot captured, length: ' + (screenshotDataUrl ? screenshotDataUrl.length : 'null'));
             
             // Step 3: Generate PDF
             showStatus('Generating PDF evidence document...', 60);
             console.log('[PROOFVAULT] Starting PDF generation...');
             const pdfBlob = await generatePdf(company, user, screenshotDataUrl);
             console.log('[PROOFVAULT] PDF generated, blob size:', pdfBlob ? pdfBlob.size : 'null');
+            alert('[DEBUG] PDF generated, size: ' + (pdfBlob ? pdfBlob.size : 'null'));
             currentPdfBlob = pdfBlob;
             
             // Step 4: Upload to server
@@ -91,6 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('[PROOFVAULT] Starting PDF upload...');
             const uploadResult = await uploadPdf(pdfBlob, company, user);
             console.log('[PROOFVAULT] Upload result:', uploadResult);
+            alert('[DEBUG] Upload completed: ' + JSON.stringify(uploadResult.data));
             currentId = uploadResult.data.id;
             
             // Step 5: Save to local storage and show success
@@ -112,6 +116,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 error: error.error,
                 statusText: error.statusText
             });
+            
+            // Add alert for debugging
+            alert('[DEBUG] Error caught: ' + JSON.stringify({
+                message: error.message,
+                name: error.name,
+                type: typeof error,
+                toString: error.toString(),
+                stack: error.stack ? error.stack.substring(0, 100) : 'no stack'
+            }, null, 2));
+            
             const errorMessage = getDetailedErrorMessage(error);
             console.error('[PROOFVAULT] Processed error message:', errorMessage);
             showError(errorMessage);
