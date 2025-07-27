@@ -402,10 +402,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const screenshotDataUrl = await captureScreenshot(tab);
             
             // Check if we captured multiple screenshots
+            console.log('[DEBUG] Screenshot data type:', typeof screenshotDataUrl);
+            console.log('[DEBUG] Screenshot data structure:', screenshotDataUrl);
+            
             if (screenshotDataUrl && screenshotDataUrl.isMultipleScreenshots) {
-                console.log(`[DEBUG] Multiple screenshots captured: ${screenshotDataUrl.screenshots.length} sections`);
+                console.log(`[DEBUG] ✅ Multiple screenshots captured: ${screenshotDataUrl.screenshots.length} sections`);
             } else {
-                console.log('[DEBUG] Single screenshot captured, dataUrl length:', 
+                console.log('[DEBUG] ❌ Single screenshot captured, dataUrl length:', 
                     typeof screenshotDataUrl === 'string' ? screenshotDataUrl.length : 'N/A');
             }
             logger.endTimer(screenshotTimer, { 
@@ -596,6 +599,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const browserOptions = browserCompatibility.getScreenshotOptions();
             
             // Try full page capture first with progress callback
+            console.log('[DEBUG] Starting full page capture...');
             const result = await screenshotCapture.captureFullPage(tab, {
                 ...browserOptions,
                 maxWidth: 1920,
@@ -604,13 +608,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 quality: 95,
                 // Progress callback for multi-section capture
                 onProgress: (current, total) => {
+                    console.log(`[DEBUG] Progress: ${current}/${total}`);
                     if (total > 1) {
                         showStatus(`Capturing page section ${current} of ${total}...`, 'loading', 35 + (current / total * 10));
                     }
                 }
             });
             
-            console.log('Full page screenshot captured with metadata:', result.metadata);
+            console.log('[DEBUG] Full page capture result:', result);
+            console.log('[DEBUG] Is multiple screenshots?', result?.isMultipleScreenshots);
+            console.log('[DEBUG] Number of screenshots:', result?.screenshots?.length);
+            
             return result; // Return the full result object with screenshots array
         } catch (error) {
             console.error('Full page capture failed, trying visible area:', error);
