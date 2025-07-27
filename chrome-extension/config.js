@@ -1,4 +1,5 @@
 console.log('[CONFIG] Loading API configuration');
+alert('[CONFIG] JavaScript is working - config loading');
 
 const API_CONFIG = {
   BASE_URL: 'http://proofvault.net:3003/api',
@@ -14,4 +15,5 @@ const API_CONFIG = {
 };
 
 console.log('[CONFIG] API configuration loaded:', API_CONFIG);
+alert('[CONFIG] API config created: ' + API_CONFIG.BASE_URL);
 window.API_CONFIG = API_CONFIG;

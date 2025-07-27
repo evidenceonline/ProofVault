@@ -1,5 +1,6 @@
 // ProofVault Extension - Full Functionality
 console.log('[PROOFVAULT] Extension loading...');
+alert('[PROOFVAULT] Simple-popup.js is loading!');
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('[PROOFVAULT] DOM loaded');
