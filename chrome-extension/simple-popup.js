@@ -331,14 +331,23 @@ document.addEventListener('DOMContentLoaded', function() {
             let errorMessage = `Upload failed: ${response.status} ${response.statusText}`;
             
             try {
-                const errorData = await response.json();
+                const responseText = await response.text();
+                alert('[DEBUG] Server error response: ' + responseText);
+                
+                // Try to parse as JSON
+                const errorData = JSON.parse(responseText);
                 if (errorData.error) {
                     errorMessage = errorData.error;
+                } else if (errorData.message) {
+                    errorMessage = errorData.message;
                 }
             } catch (e) {
-                // Use default error message if can't parse response
+                // If can't parse as JSON, use the raw text
+                alert('[DEBUG] Could not parse error as JSON: ' + e.message);
+                // errorMessage already set to default above
             }
             
+            alert('[DEBUG] Throwing error with message: ' + errorMessage);
             throw new Error(errorMessage);
         }
         
