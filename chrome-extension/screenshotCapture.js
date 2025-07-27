@@ -331,6 +331,11 @@ class ScreenshotCapture {
       console.log(`Will capture ${capturesX}x${capturesY} = ${totalCaptures} screenshots`);
       console.log(`Device pixel ratio: ${devicePixelRatio}`);
       
+      // Call progress callback if provided
+      if (options.onProgress && typeof options.onProgress === 'function') {
+        options.onProgress(0, totalCaptures);
+      }
+      
       // Prepare page for capture
       await chrome.tabs.sendMessage(tab.id, { action: 'prepareForCapture' });
       
@@ -360,9 +365,9 @@ class ScreenshotCapture {
       console.log(`Canvas dimensions: ${this.canvas.width}x${this.canvas.height}`);
       console.log(`Original dimensions: ${actualWidth}x${actualHeight}`);
       
-      // Capture all sections
+      // Capture all sections as separate screenshots
       let captureCount = 0;
-      const scale = this.canvas.width / actualWidth; // Calculate scale factor
+      const screenshots = [];
       
       for (let y = 0; y < capturesY; y++) {
         for (let x = 0; x < capturesX; x++) {
@@ -382,59 +387,58 @@ class ScreenshotCapture {
           // Capture visible area with high quality
           const dataUrl = await this.performCapture(tab, {
             ...options,
-            format: 'png', // Use PNG for better quality during stitching
-            quality: 100
+            format: options.format || 'png',
+            quality: options.quality || 95
           });
           
-          // Calculate destination coordinates on canvas
-          const destX = Math.floor(scrollX * scale);
-          const destY = Math.floor(scrollY * scale);
-          const destWidth = Math.floor(viewportWidth * scale);
-          const destHeight = Math.floor(viewportHeight * scale);
-          
-          // Draw captured section to canvas
-          await this.drawSectionToCanvas(
-            dataUrl,
-            destX,
-            destY,
-            destWidth,
-            destHeight,
-            // Source dimensions (what to extract from the captured image)
-            0, 0, viewportWidth, viewportHeight
-          );
+          // Store screenshot with metadata
+          screenshots.push({
+            dataUrl: dataUrl,
+            sectionIndex: captureCount + 1,
+            totalSections: totalCaptures,
+            position: {
+              x: scrollX,
+              y: scrollY,
+              viewportX: x,
+              viewportY: y
+            },
+            dimensions: {
+              width: viewportWidth,
+              height: viewportHeight
+            }
+          });
           
           captureCount++;
           console.log(`Captured ${captureCount}/${totalCaptures} sections`);
+          
+          // Call progress callback if provided
+          if (options.onProgress && typeof options.onProgress === 'function') {
+            options.onProgress(captureCount, totalCaptures);
+          }
         }
       }
       
       // Restore page state
       await chrome.tabs.sendMessage(tab.id, { action: 'restorePageState' });
       
-      // Generate final image with high quality
-      const outputFormat = options.format || 'png';
-      const outputQuality = outputFormat === 'jpeg' ? (options.quality || 95) / 100 : 1.0;
-      
-      const fullPageDataUrl = this.canvas.toDataURL(
-        `image/${outputFormat}`,
-        outputQuality
-      );
-      
       const endTime = performance.now();
       console.log(`Full page capture completed in ${Math.round(endTime - startTime)}ms`);
       
       return {
-        dataUrl: fullPageDataUrl,
+        screenshots: screenshots,
+        isMultipleScreenshots: true,
         metadata: {
           captureTime: new Date().toISOString(),
           processingTime: Math.round(endTime - startTime),
           format: options.format || 'png',
           quality: options.quality || 95,
           fullPageCapture: true,
+          totalSections: totalCaptures,
+          capturesX: capturesX,
+          capturesY: capturesY,
           dimensions: {
-            full: { width: dimensions.fullWidth, height: dimensions.fullHeight },
-            captured: { width: this.canvas.width, height: this.canvas.height },
-            scale: scale
+            full: { width: actualWidth, height: actualHeight },
+            viewport: { width: viewportWidth, height: viewportHeight }
           },
           tabInfo: {
             id: tab.id,

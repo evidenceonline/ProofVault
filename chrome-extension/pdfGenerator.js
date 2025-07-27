@@ -33,7 +33,7 @@ class PdfGenerator {
   /**
    * Generate optimized PDF with legal metadata
    */
-  async generatePdf(company, user, id, screenshotDataUrl, url, title, options = {}) {
+  async generatePdf(company, user, id, screenshotData, url, title, options = {}) {
     const startTime = performance.now();
     
     try {
@@ -51,8 +51,15 @@ class PdfGenerator {
       // Add evidence details
       this.addEvidenceDetails(company, user, id, url, title);
       
-      // Process and add screenshot
-      await this.addOptimizedScreenshot(screenshotDataUrl);
+      // Check if we have multiple screenshots or a single one
+      if (screenshotData && screenshotData.isMultipleScreenshots && screenshotData.screenshots) {
+        console.log(`Processing ${screenshotData.screenshots.length} screenshots...`);
+        await this.addMultipleScreenshots(screenshotData.screenshots, screenshotData.metadata);
+      } else {
+        // Handle single screenshot (backward compatibility)
+        const dataUrl = typeof screenshotData === 'string' ? screenshotData : screenshotData.dataUrl;
+        await this.addOptimizedScreenshot(dataUrl);
+      }
       
       // Add legal footer
       this.addLegalFooter();
@@ -290,6 +297,126 @@ class PdfGenerator {
       this.doc.setFontSize(this.options.fontSize.body);
       this.doc.setTextColor(220, 53, 69);
       this.doc.text('Screenshot could not be processed', this.options.margin, this.currentY);
+      this.currentY += 10;
+    }
+  }
+
+  /**
+   * Add multiple screenshots to PDF with section headers
+   */
+  async addMultipleScreenshots(screenshots, captureMetadata) {
+    try {
+      console.log(`Adding ${screenshots.length} screenshots to PDF...`);
+      
+      for (let i = 0; i < screenshots.length; i++) {
+        const screenshot = screenshots[i];
+        
+        // Add section header
+        this.doc.setFontSize(this.options.fontSize.header);
+        this.doc.setFont(undefined, 'bold');
+        
+        let sectionTitle;
+        if (screenshots.length === 1) {
+          sectionTitle = 'Website Screenshot';
+        } else {
+          sectionTitle = `Website Screenshot - Section ${screenshot.sectionIndex} of ${screenshot.totalSections}`;
+        }
+        
+        // Check if we need a new page
+        if (this.currentY > this.doc.internal.pageSize.height - 100) {
+          this.doc.addPage();
+          this.currentY = this.options.margin;
+        }
+        
+        this.doc.text(sectionTitle, this.options.margin, this.currentY);
+        this.currentY += 10;
+        
+        // Add position information for context
+        if (screenshots.length > 1) {
+          this.doc.setFontSize(this.options.fontSize.small);
+          this.doc.setFont(undefined, 'normal');
+          this.doc.setTextColor(100);
+          
+          const positionText = `Page position: X=${screenshot.position.x}px, Y=${screenshot.position.y}px`;
+          this.doc.text(positionText, this.options.margin, this.currentY);
+          this.currentY += 8;
+          
+          // Reset text color
+          this.doc.setTextColor(0);
+        }
+        
+        // Process and add the screenshot
+        const imageData = await this.processImageForPdf(screenshot.dataUrl);
+        
+        // Calculate optimal image dimensions
+        const imgDimensions = this.calculateOptimalImageDimensions(
+          imageData.width,
+          imageData.height
+        );
+        
+        // Check if image fits on current page
+        if (this.currentY + imgDimensions.height > this.doc.internal.pageSize.height - this.options.margin) {
+          this.doc.addPage();
+          this.currentY = this.options.margin;
+          
+          // Re-add section header on new page
+          this.doc.setFontSize(this.options.fontSize.header);
+          this.doc.setFont(undefined, 'bold');
+          this.doc.text(`${sectionTitle} (continued)`, this.options.margin, this.currentY);
+          this.currentY += 10;
+        }
+        
+        // Add image to PDF
+        this.doc.addImage(
+          imageData.dataUrl,
+          'PNG',
+          this.options.margin,
+          this.currentY,
+          imgDimensions.width,
+          imgDimensions.height,
+          undefined,
+          'FAST'
+        );
+        
+        this.currentY += imgDimensions.height + 10;
+        
+        console.log(`Screenshot ${i + 1}/${screenshots.length} added: ${imgDimensions.width}x${imgDimensions.height}mm`);
+        
+        // Add some spacing between screenshots
+        if (i < screenshots.length - 1) {
+          this.currentY += 5;
+        }
+      }
+      
+      // Add summary information
+      if (screenshots.length > 1) {
+        this.currentY += 10;
+        this.doc.setFontSize(this.options.fontSize.small);
+        this.doc.setFont(undefined, 'normal');
+        this.doc.setTextColor(100);
+        
+        const summaryText = [
+          `Full page capture completed with ${screenshots.length} sections.`,
+          `Total page dimensions: ${captureMetadata.dimensions.full.width}x${captureMetadata.dimensions.full.height} pixels`,
+          `Viewport size: ${captureMetadata.dimensions.viewport.width}x${captureMetadata.dimensions.viewport.height} pixels`
+        ];
+        
+        summaryText.forEach(text => {
+          this.doc.text(text, this.options.margin, this.currentY);
+          this.currentY += 6;
+        });
+        
+        // Reset text color
+        this.doc.setTextColor(0);
+      }
+      
+    } catch (error) {
+      console.error('Multiple screenshots processing failed:', error);
+      
+      // Add error note instead of images
+      this.doc.setFontSize(this.options.fontSize.body);
+      this.doc.setTextColor(220, 53, 69);
+      this.doc.text('Screenshots could not be processed', this.options.margin, this.currentY);
       this.currentY += 10;
     }
   }

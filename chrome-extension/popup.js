@@ -400,7 +400,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const screenshotTimer = logger.startTimer('screenshot_capture');
             console.log('[DEBUG] Tab info before capture:', tab);
             const screenshotDataUrl = await captureScreenshot(tab);
-            console.log('[DEBUG] Screenshot captured, dataUrl length:', screenshotDataUrl.length);
+            
+            // Check if we captured multiple screenshots
+            if (screenshotDataUrl && screenshotDataUrl.isMultipleScreenshots) {
+                console.log(`[DEBUG] Multiple screenshots captured: ${screenshotDataUrl.screenshots.length} sections`);
+            } else {
+                console.log('[DEBUG] Single screenshot captured, dataUrl length:', 
+                    typeof screenshotDataUrl === 'string' ? screenshotDataUrl.length : 'N/A');
+            }
             logger.endTimer(screenshotTimer, { 
                 dataUrlSize: screenshotDataUrl.length,
                 tabUrl: tab.url,
@@ -413,13 +420,20 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Step 4: Generate PDF with sanitized data
             logger.logEvidenceCapture('pdf_generation_start');
-            showStatus('Generating authenticated PDF document...', 'loading', 65);
+            
+            // Update status based on screenshot type
+            if (screenshotDataUrl && screenshotDataUrl.isMultipleScreenshots) {
+                showStatus(`Generating PDF with ${screenshotDataUrl.screenshots.length} page sections...`, 'loading', 65);
+            } else {
+                showStatus('Generating authenticated PDF document...', 'loading', 65);
+            }
+            
             const pdfTimer = logger.startTimer('pdf_generation');
             const pdfBlob = await generatePdf(
                 sanitizedData.organization, 
                 sanitizedData.user, 
                 id, 
-                screenshotDataUrl, 
+                screenshotDataUrl, // This now can be either a string (single) or an object (multiple screenshots)
                 sanitizedData.url, 
                 sanitizedData.title
             );
@@ -581,17 +595,23 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get browser-specific screenshot options
             const browserOptions = browserCompatibility.getScreenshotOptions();
             
-            // Try full page capture first
+            // Try full page capture first with progress callback
             const result = await screenshotCapture.captureFullPage(tab, {
                 ...browserOptions,
                 maxWidth: 1920,
                 maxHeight: 10800,
                 format: 'png',
-                quality: 95
+                quality: 95,
+                // Progress callback for multi-section capture
+                onProgress: (current, total) => {
+                    if (total > 1) {
+                        showStatus(`Capturing page section ${current} of ${total}...`, 'loading', 35 + (current / total * 10));
+                    }
+                }
             });
             
             console.log('Full page screenshot captured with metadata:', result.metadata);
-            return result.dataUrl;
+            return result; // Return the full result object with screenshots array
         } catch (error) {
             console.error('Full page capture failed, trying visible area:', error);
             
@@ -604,7 +624,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 console.log('Visible area screenshot captured with metadata:', result.metadata);
-                return result.dataUrl;
+                return result.dataUrl; // Single screenshot - return just the dataUrl for backward compatibility
             } catch (fallbackError) {
                 console.error('Enhanced screenshot capture failed:', fallbackError);
                 
@@ -614,7 +634,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (chrome.runtime.lastError) {
                             reject(new Error(chrome.runtime.lastError.message));
                         } else {
-                            resolve(dataUrl);
+                            resolve(dataUrl); // Basic capture - return just the dataUrl
                         }
                     });
                 });
@@ -628,12 +648,12 @@ document.addEventListener('DOMContentLoaded', function() {
      * @param {string} company - Organization name
      * @param {string} user - User name  
      * @param {string} id - Evidence ID
-     * @param {string} screenshotDataUrl - Screenshot data URL
+     * @param {string|Object} screenshotData - Screenshot data URL or object with multiple screenshots
      * @param {string} url - Page URL
      * @param {string} title - Page title
      * @returns {Promise<Blob>} Generated PDF blob
      */
-    async function generatePdf(company, user, id, screenshotDataUrl, url, title) {
+    async function generatePdf(company, user, id, screenshotData, url, title) {
         try {
             console.log('Starting optimized PDF generation...');
             
@@ -644,7 +664,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 company, 
                 user, 
                 id, 
-                screenshotDataUrl, 
+                screenshotData, // Pass the screenshot data (could be string or object)
                 url, 
                 title,
                 {
