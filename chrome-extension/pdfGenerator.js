@@ -38,9 +38,6 @@ class PdfGenerator {
     
     try {
       console.log('Starting PDF generation...');
-      console.log('Screenshot data type:', typeof screenshotData);
-      console.log('Is multiple screenshots:', screenshotData?.isMultipleScreenshots);
-      console.log('Number of screenshots:', screenshotData?.screenshots?.length);
       
       // Initialize PDF document
       this.initializePdf();
@@ -62,7 +59,6 @@ class PdfGenerator {
       
       // Check if we have multiple screenshots or a single one
       if (screenshotData && screenshotData.isMultipleScreenshots && screenshotData.screenshots) {
-        console.log(`Processing ${screenshotData.screenshots.length} screenshots...`);
         await this.addMultipleScreenshots(screenshotData.screenshots, screenshotData.metadata);
       } else {
         // Handle single screenshot (backward compatibility)
@@ -104,8 +100,14 @@ class PdfGenerator {
    */
   initializePdf() {
     try {
+      // Ensure jsPDF is available
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        throw new Error('jsPDF library not loaded');
+      }
+      
       const { jsPDF } = window.jspdf;
       
+      // Create PDF with error handling
       this.doc = new jsPDF({
         orientation: this.options.orientation,
         unit: this.options.unit,
@@ -115,10 +117,28 @@ class PdfGenerator {
         hotfixes: ["px_scaling"]
       });
       
+      // Critical validation: Ensure document was created
+      if (!this.doc) {
+        throw new Error('PDF document creation failed - jsPDF returned null/undefined');
+      }
+      
+      // Validate essential methods exist
+      const requiredMethods = ['setFontSize', 'text', 'addImage', 'addPage', 'output'];
+      for (const method of requiredMethods) {
+        if (typeof this.doc[method] !== 'function') {
+          throw new Error(`PDF document missing required method: ${method}`);
+        }
+      }
+      
       // Set up page dimensions
       this.pageWidth = this.doc.internal.pageSize.getWidth();
       this.pageHeight = this.doc.internal.pageSize.getHeight();
       this.currentY = this.options.margin;
+      
+      // Validate dimensions
+      if (!this.pageWidth || !this.pageHeight || this.pageWidth <= 0 || this.pageHeight <= 0) {
+        throw new Error('Invalid PDF page dimensions');
+      }
       
       // Configure PDF properties
       this.doc.setProperties({
@@ -129,14 +149,10 @@ class PdfGenerator {
         producer: 'ProofVault PDF Generator v1.0'
       });
       
-      // Validate that the PDF document was created successfully
-      if (!this.doc) {
-        throw new Error('PDF document creation failed - jsPDF returned null/undefined');
-      }
-      
-      console.log(`PDF initialized: ${this.pageWidth}x${this.pageHeight}${this.options.unit}`);
+      console.log(`PDF initialized successfully: ${this.pageWidth}x${this.pageHeight}${this.options.unit}`);
       
     } catch (error) {
+      this.doc = null; // Ensure we don't have a partially initialized document
       throw new Error(`PDF initialization failed: ${error.message}`);
     }
   }
@@ -322,115 +338,142 @@ class PdfGenerator {
     try {
       console.log(`Adding ${screenshots.length} screenshots to PDF...`);
       
+      // Validate PDF document is available before starting
+      if (!this.doc) {
+        throw new Error('PDF document is null before processing screenshots');
+      }
+      
       for (let i = 0; i < screenshots.length; i++) {
         const screenshot = screenshots[i];
         
-        // Add section header - ensure doc is still valid
+        // Critical: Re-verify PDF document is still valid at each iteration
         if (!this.doc) {
-          throw new Error('PDF document is null - initialization may have failed');
+          throw new Error(`PDF document became null at screenshot ${i + 1}/${screenshots.length}`);
         }
         
-        this.doc.setFontSize(this.options.fontSize.header);
-        this.doc.setFont(undefined, 'bold');
-        
-        let sectionTitle;
-        if (screenshots.length === 1) {
-          sectionTitle = 'Website Screenshot';
-        } else {
-          sectionTitle = `Website Screenshot - Section ${screenshot.sectionIndex} of ${screenshot.totalSections}`;
+        // Defensive check: Ensure PDF document has required methods
+        if (typeof this.doc.setFontSize !== 'function' || typeof this.doc.addImage !== 'function') {
+          throw new Error(`PDF document is corrupted at screenshot ${i + 1}/${screenshots.length}`);
         }
         
-        // Check if we need a new page
-        if (!this.doc) {
-          throw new Error('PDF document became null during processing');
-        }
-        
-        if (this.currentY > this.doc.internal.pageSize.height - 100) {
-          this.doc.addPage();
-          this.currentY = this.options.margin;
-        }
-        
-        this.doc.text(sectionTitle, this.options.margin, this.currentY);
-        this.currentY += 10;
-        
-        // Add position information for context
-        if (screenshots.length > 1 && this.doc) {
-          try {
-            this.doc.setFontSize(this.options.fontSize.small || 10);
-            this.doc.setFont(undefined, 'normal');
-            this.doc.setTextColor(100);
-            
-            const positionText = `Section ${screenshot.sectionIndex || i + 1} - Position: X=${screenshot.position?.x || 0}px, Y=${screenshot.position?.y || 0}px`;
-            
-            // Ensure currentY is valid
-            if (!this.currentY || this.currentY < this.options.margin) {
-              this.currentY = this.options.margin + 10;
-            }
-            
-            if (this.doc) {
+        try {
+          this.doc.setFontSize(this.options.fontSize.header);
+          this.doc.setFont(undefined, 'bold');
+          
+          let sectionTitle;
+          if (screenshots.length === 1) {
+            sectionTitle = 'Website Screenshot';
+          } else {
+            sectionTitle = `Website Screenshot - Section ${screenshot.sectionIndex} of ${screenshot.totalSections}`;
+          }
+          
+          // Validate Y position and page dimensions
+          if (this.currentY > this.doc.internal.pageSize.height - 100) {
+            this.doc.addPage();
+            this.currentY = this.options.margin;
+          }
+          
+          this.doc.text(sectionTitle, this.options.margin, this.currentY);
+          this.currentY += 10;
+          
+          // Add position information for context (simplified to avoid corruption)
+          if (screenshots.length > 1) {
+            try {
+              this.doc.setFontSize(this.options.fontSize.small || 10);
+              this.doc.setFont(undefined, 'normal');
+              this.doc.setTextColor(100);
+              
+              const positionText = `Section ${screenshot.sectionIndex || i + 1} - Position: X=${screenshot.position?.x || 0}px, Y=${screenshot.position?.y || 0}px`;
+              
+              // Ensure currentY is valid
+              if (!this.currentY || this.currentY < this.options.margin) {
+                this.currentY = this.options.margin + 10;
+              }
+              
               this.doc.text(positionText, this.options.margin, this.currentY);
               this.currentY += 8;
               
               // Reset text color
               this.doc.setTextColor(0);
+            } catch (textError) {
+              console.warn('Failed to add position text:', textError);
+              // Continue without position text - don't fail the whole process
             }
-          } catch (textError) {
-            console.warn('Failed to add position text:', textError);
-            // Continue without position text
           }
-        }
-        
-        // Process and add the screenshot
-        const imageData = await this.processImageForPdf(screenshot.dataUrl);
-        
-        // Calculate optimal image dimensions for PDF
-        const maxWidth = this.options.maxImageWidth || 170; // mm
-        const maxHeight = this.options.maxImageHeight || 240; // mm
-        
-        const imgDimensions = this.calculateOptimalDimensions(
-          imageData.width,
-          imageData.height,
-          maxWidth,
-          maxHeight
-        );
-        
-        // Check if image fits on current page
-        if (this.doc && this.currentY + imgDimensions.height > this.doc.internal.pageSize.height - this.options.margin) {
-          this.doc.addPage();
-          this.currentY = this.options.margin;
           
-          // Re-add section header on new page
-          if (this.doc) {
+          // Process and add the screenshot with error handling
+          const imageData = await this.processImageForPdf(screenshot.dataUrl);
+          
+          // Calculate optimal image dimensions for PDF
+          const maxWidth = this.options.maxImageWidth || 170; // mm
+          const maxHeight = this.options.maxImageHeight || 240; // mm
+          
+          const imgDimensions = this.calculateOptimalDimensions(
+            imageData.width,
+            imageData.height,
+            maxWidth,
+            maxHeight
+          );
+          
+          // Final check before adding image
+          if (!this.doc) {
+            throw new Error(`PDF document became null during image processing for screenshot ${i + 1}`);
+          }
+          
+          // Check if image fits on current page
+          if (this.currentY + imgDimensions.height > this.doc.internal.pageSize.height - this.options.margin) {
+            this.doc.addPage();
+            this.currentY = this.options.margin;
+            
+            // Re-add section header on new page
             this.doc.setFontSize(this.options.fontSize.header || 16);
             this.doc.setFont(undefined, 'bold');
             this.doc.text(`${sectionTitle} (continued)`, this.options.margin, this.currentY);
             this.currentY += 10;
           }
-        }
-        
-        // Add image to PDF
-        if (!this.doc) {
-          throw new Error('PDF document became null during image addition');
-        }
-        
-        this.doc.addImage(
-          imageData.dataUrl,
-          'PNG',
-          this.options.margin,
-          this.currentY,
-          imgDimensions.width,
-          imgDimensions.height,
-          undefined,
-          'FAST'
-        );
-        
-        this.currentY += imgDimensions.height + 10;
-        
-        console.log(`Screenshot ${i + 1}/${screenshots.length} added: ${imgDimensions.width}x${imgDimensions.height}mm`);
-        
-        // Add some spacing between screenshots
-        if (i < screenshots.length - 1) {
-          this.currentY += 5;
+          
+          // Critical: Final validation before addImage call
+          if (!this.doc || typeof this.doc.addImage !== 'function') {
+            throw new Error(`PDF document invalid before adding image ${i + 1}`);
+          }
+          
+          // Add image to PDF with error handling
+          this.doc.addImage(
+            imageData.dataUrl,
+            'PNG',
+            this.options.margin,
+            this.currentY,
+            imgDimensions.width,
+            imgDimensions.height,
+            undefined,
+            'FAST'
+          );
+          
+          this.currentY += imgDimensions.height + 10;
+          
+          console.log(`Screenshot ${i + 1}/${screenshots.length} added successfully`);
+          
+          // Add some spacing between screenshots
+          if (i < screenshots.length - 1) {
+            this.currentY += 5;
+          }
+          
+        } catch (screenshotError) {
+          console.error(`Failed to process screenshot ${i + 1}:`, screenshotError);
+          
+          // Add error placeholder instead of failing completely
+          if (this.doc && typeof this.doc.text === 'function') {
+            try {
+              this.doc.setFontSize(this.options.fontSize.body);
+              this.doc.setTextColor(220, 53, 69);
+              this.doc.text(`Screenshot ${i + 1} could not be processed`, this.options.margin, this.currentY);
+              this.currentY += 15;
+              this.doc.setTextColor(0);
+            } catch (errorTextError) {
+              console.error('Could not even add error text:', errorTextError);
+              // Continue to next screenshot
+            }
+          }
         }
       }
       
@@ -470,23 +513,25 @@ class PdfGenerator {
       }
       
     } catch (error) {
-      console.error('Multiple screenshots processing failed:', error);
+      console.error('Critical error in multiple screenshots processing:', error);
       
-      // Add error note instead of images - but only if doc is still valid
-      if (this.doc) {
-        try {
+      // If PDF document is completely corrupted, we need to re-throw
+      if (!this.doc) {
+        throw new Error(`PDF document became null during processing: ${error.message}`);
+      }
+      
+      // Otherwise, try to add at least an error note if possible
+      try {
+        if (this.doc && typeof this.doc.text === 'function') {
           this.doc.setFontSize(this.options.fontSize.body);
           this.doc.setTextColor(220, 53, 69);
-          this.doc.text('Screenshots could not be processed', this.options.margin, this.currentY);
+          this.doc.text('Some screenshots could not be processed', this.options.margin, this.currentY);
           this.currentY += 10;
-        } catch (errorTextError) {
-          console.error('Failed to add error text to PDF:', errorTextError);
-          // Re-throw the original error since we can't even add error text
-          throw error;
+          this.doc.setTextColor(0);
         }
-      } else {
-        // If doc is null, we can't recover - re-throw the error
-        throw error;
+      } catch (finalError) {
+        console.error('Final error handling failed:', finalError);
+        throw error; // Re-throw original error
       }
     }
   }
@@ -677,7 +722,23 @@ class PdfGenerator {
    */
   generateBlob() {
     try {
-      return this.doc.output('blob');
+      // Final validation before generating blob
+      if (!this.doc) {
+        throw new Error('PDF document is null - cannot generate blob');
+      }
+      
+      if (typeof this.doc.output !== 'function') {
+        throw new Error('PDF document output method is not available');
+      }
+      
+      const blob = this.doc.output('blob');
+      
+      // Validate generated blob
+      if (!blob || !(blob instanceof Blob) || blob.size === 0) {
+        throw new Error('Generated PDF blob is invalid or empty');
+      }
+      
+      return blob;
     } catch (error) {
       throw new Error(`PDF blob generation failed: ${error.message}`);
     }

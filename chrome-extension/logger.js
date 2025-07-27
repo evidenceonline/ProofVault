@@ -6,13 +6,13 @@
 class Logger {
   constructor() {
     this.config = {
-      level: 'INFO', // DEBUG, INFO, WARN, ERROR
-      maxLogs: 1000,
-      maxLogSize: 500 * 1024, // 500KB
-      enableConsole: true,
+      level: 'WARN', // Only WARN and ERROR - no INFO or DEBUG to reduce quota usage
+      maxLogs: 100, // Reduced from 1000 to 100
+      maxLogSize: 50 * 1024, // Reduced from 500KB to 50KB
+      enableConsole: false, // Disable console overrides to prevent storage bloat
       enableStorage: true,
-      enablePerformance: true,
-      enableNetworkLogging: true
+      enablePerformance: false, // Disable performance logging to reduce quota usage
+      enableNetworkLogging: false // Disable network logging to reduce quota usage
     };
     
     this.levels = {
@@ -579,16 +579,22 @@ class Logger {
 
   async saveLogsToStorage() {
     try {
-      const logsToStore = this.logs.slice(-100); // Store last 100 logs
-      await chrome.storage.local.set({
-        proofvault_logs: {
-          sessionId: this.sessionId,
-          logs: logsToStore,
-          lastUpdate: Date.now()
-        }
-      });
+      // Only store ERROR level logs to minimize storage usage
+      const errorLogs = this.logs.filter(log => log.level === 'ERROR').slice(-20); // Only last 20 errors
+      
+      // Only save if we have errors or it's been more than 5 minutes since last save
+      if (errorLogs.length > 0) {
+        await chrome.storage.local.set({
+          proofvault_logs: {
+            sessionId: this.sessionId,
+            logs: errorLogs,
+            lastUpdate: Date.now()
+          }
+        });
+      }
     } catch (error) {
-      this.originalConsole?.error('Failed to save logs to storage:', error);
+      // Don't log storage errors to avoid recursive loops
+      console.error('Failed to save logs to storage:', error);
     }
   }
 
@@ -611,21 +617,31 @@ class Logger {
   }
 
   startPeriodicCleanup() {
-    // Clean up old logs every 10 minutes
+    // Clean up old logs every 2 minutes (more aggressive)
     setInterval(() => {
-      const oneHourAgo = Date.now() - (60 * 60 * 1000);
+      const tenMinutesAgo = Date.now() - (10 * 60 * 1000); // Keep only last 10 minutes
       const initialCount = this.logs.length;
       
-      this.logs = this.logs.filter(log => log.timestamp > oneHourAgo);
-      this.networkRequests = this.networkRequests.filter(req => req.timestamp > oneHourAgo);
+      // Keep only recent error and warn logs
+      this.logs = this.logs.filter(log => 
+        log.timestamp > tenMinutesAgo && (log.level === 'ERROR' || log.level === 'WARN')
+      );
+      this.networkRequests = this.networkRequests.filter(req => req.timestamp > tenMinutesAgo);
       
-      if (this.logs.length < initialCount) {
-        this.debug('Log Cleanup', { 
-          removed: initialCount - this.logs.length,
-          remaining: this.logs.length 
-        });
+      // Clear performance metrics older than 10 minutes
+      this.performanceMetrics.screenshotCapture = this.performanceMetrics.screenshotCapture
+        .filter(metric => Date.now() - metric.startTime < 10 * 60 * 1000);
+      this.performanceMetrics.pdfGeneration = this.performanceMetrics.pdfGeneration
+        .filter(metric => Date.now() - metric.startTime < 10 * 60 * 1000);
+      this.performanceMetrics.apiRequests = this.performanceMetrics.apiRequests
+        .filter(metric => Date.now() - metric.startTime < 10 * 60 * 1000);
+      
+      // If we have too many logs, clear storage
+      if (this.logs.length > this.config.maxLogs) {
+        this.logs = this.logs.slice(-this.config.maxLogs);
+        chrome.storage.local.remove(['proofvault_logs']).catch(() => {});
       }
-    }, 10 * 60 * 1000);
+    }, 2 * 60 * 1000); // Every 2 minutes
   }
 }
 

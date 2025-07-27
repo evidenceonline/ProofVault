@@ -328,14 +328,10 @@ document.addEventListener('DOMContentLoaded', function() {
         let sanitizedData = null; // Declare outside try block for error handling
         
         try {
-            logger.info('Evidence Capture Started', {
-                company: company.substring(0, 20) + '...',
-                user: user.substring(0, 20) + '...',
-                url: window.location.href
-            });
+            // Reduced logging to prevent quota issues
+            console.log('Evidence capture started');
             
             // Comprehensive validation
-            const validationTimer = logger.startTimer('form_validation');
             const tab = await getCurrentTab();
             const formValidation = validator.validateEvidenceForm({
                 organization: company,
@@ -343,14 +339,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 url: tab.url,
                 title: tab.title
             });
-            logger.endTimer(validationTimer, { isValid: formValidation.isValid });
 
             if (!formValidation.isValid) {
-                logger.error('Form Validation Failed', {
-                    errors: formValidation.errors,
-                    warnings: formValidation.warnings
-                });
-                
                 // Show first error
                 const firstError = formValidation.errors[0];
                 showError(`Validation failed: ${firstError}`);
@@ -362,13 +352,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     userInput.focus();
                 }
                 
-                logger.logEvidenceCapture('validation', { errors: formValidation.errors }, false);
                 return;
             }
-
-            logger.logEvidenceCapture('validation', { 
-                sanitizedFields: Object.keys(formValidation.sanitized) 
-            }, true);
 
             // Use sanitized values
             sanitizedData = formValidation.sanitized;
@@ -377,25 +362,18 @@ document.addEventListener('DOMContentLoaded', function() {
             updateButtonState();
             
             // Step 1: Check API health
-            logger.logEvidenceCapture('api_health_check_start');
             showStatus('Connecting to ProofVault servers...', 'loading', 10);
-            const healthTimer = logger.startTimer('api_health_check');
             await apiClient.checkHealth();
-            logger.endTimer(healthTimer);
-            logger.logEvidenceCapture('api_health_check_complete', {}, true);
             await delay(500); // UX delay for better feedback
             
             // Step 2: Generate ID and prepare
             showStatus('Preparing evidence capture...', 'loading', 25);
             const id = generateUniqueId();
             currentId = id;
-            logger.logEvidenceCapture('id_generation', { evidenceId: id }, true);
             await delay(300);
 
             // Step 3: Capture screenshot
-            logger.logEvidenceCapture('screenshot_capture_start');
             showStatus('Capturing webpage screenshot...', 'loading', 40);
-            const screenshotTimer = logger.startTimer('screenshot_capture');
             console.log('[DEBUG] Tab info before capture:', tab);
             const screenshotDataUrl = await captureScreenshot(tab);
             
@@ -409,18 +387,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('[DEBUG] ❌ Single screenshot captured, dataUrl length:', 
                     typeof screenshotDataUrl === 'string' ? screenshotDataUrl.length : 'N/A');
             }
-            logger.endTimer(screenshotTimer, { 
-                dataUrlSize: screenshotDataUrl.length,
-                tabUrl: tab.url,
-                tabTitle: tab.title
-            });
-            logger.logEvidenceCapture('screenshot_capture_complete', {
-                screenshotSize: Math.round(screenshotDataUrl.length / 1024) + 'KB'
-            }, true);
             await delay(500);
             
             // Step 4: Generate PDF with sanitized data
-            logger.logEvidenceCapture('pdf_generation_start');
             
             // Update status based on screenshot type
             if (screenshotDataUrl && screenshotDataUrl.isMultipleScreenshots) {
@@ -429,7 +398,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 showStatus('Generating authenticated PDF document...', 'loading', 65);
             }
             
-            const pdfTimer = logger.startTimer('pdf_generation');
             const pdfBlob = await generatePdf(
                 sanitizedData.organization, 
                 sanitizedData.user, 
@@ -438,118 +406,53 @@ document.addEventListener('DOMContentLoaded', function() {
                 sanitizedData.url, 
                 sanitizedData.title
             );
-            logger.endTimer(pdfTimer, { 
-                pdfSize: pdfBlob.size,
-                pdfType: pdfBlob.type
-            });
             
             // Validate generated PDF
-            const pdfValidationTimer = logger.startTimer('pdf_validation');
             const pdfValidation = validator.validatePdfBlob(pdfBlob);
-            logger.endTimer(pdfValidationTimer, { isValid: pdfValidation.isValid });
             
             if (!pdfValidation.isValid) {
-                logger.error('PDF Validation Failed', {
-                    errors: pdfValidation.errors,
-                    pdfSize: pdfBlob.size,
-                    pdfType: pdfBlob.type
-                });
                 throw new Error(`PDF validation failed: ${pdfValidation.errors[0]}`);
             }
-            
-            logger.logEvidenceCapture('pdf_generation_complete', {
-                pdfSize: Math.round(pdfBlob.size / 1024) + 'KB',
-                validationWarnings: pdfValidation.warnings
-            }, true);
             
             currentPdfBlob = pdfBlob;
             await delay(500);
 
             // Step 5: Upload to server with sanitized metadata
-            logger.logEvidenceCapture('upload_start');
             showStatus('Uploading to ProofVault secure storage...', 'loading', 85);
-            const uploadTimer = logger.startTimer('api_upload');
             const uploadResponse = await apiClient.uploadPdf(pdfBlob, {
                 id: id,
                 company: sanitizedData.organization,
                 user: sanitizedData.user
             });
-            logger.endTimer(uploadTimer, {
-                success: uploadResponse.success,
-                responseId: uploadResponse.data?.id
-            });
 
             if (uploadResponse.success) {
-                logger.logEvidenceCapture('upload_complete', {
-                    serverId: uploadResponse.data.id,
-                    originalId: id
-                }, true);
-                
                 showStatus('Evidence successfully captured and verified', 'loading', 100);
                 await delay(800);
                 showResult(uploadResponse.data.id);
                 currentId = uploadResponse.data.id;
-                
-                // Log successful completion
-                logger.endTimer(captureTimer, {
-                    evidenceId: uploadResponse.data.id,
-                    finalStep: 'complete'
-                });
-                logger.info('Evidence Capture Completed Successfully', {
-                    evidenceId: uploadResponse.data.id,
-                    totalTime: captureTimer.duration || 'unknown'
-                });
             } else {
                 throw new Error('Upload failed: ' + uploadResponse.message);
             }
 
         } catch (error) {
-            // Log comprehensive error information
-            logger.endTimer(captureTimer, {
-                success: false,
-                error: error.message,
-                errorType: error.name || 'Unknown'
-            });
-            
+            // Log only critical errors to prevent quota issues
             logger.error('Evidence Capture Failed', {
                 error: error.message,
-                stack: error.stack,
-                step: 'evidence_capture',
-                evidenceId: currentId,
-                company: sanitizedData?.organization || company,
-                user: sanitizedData?.user || user,
                 errorType: categorizeError(error)
             });
-            
-            logger.logEvidenceCapture('capture_failed', {
-                error: error.message,
-                errorCategory: categorizeError(error)
-            }, false);
             
             let errorMessage = 'An unexpected error occurred during evidence capture.';
             
             if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('timeout')) {
                 errorMessage = 'Cannot connect to ProofVault servers. Please check your internet connection and try again.';
-                logger.warn('Network Connectivity Issue', { originalError: error.message });
             } else if (error.message.includes('screenshot') || error.message.includes('captureVisibleTab')) {
                 errorMessage = 'Unable to capture webpage screenshot. Please ensure the page is fully loaded and try again.';
-                logger.warn('Screenshot Capture Issue', { 
-                    originalError: error.message,
-                    tabUrl: tab?.url,
-                    tabStatus: tab?.status
-                });
             } else if (error.message.includes('PDF') || error.message.includes('jsPDF')) {
                 errorMessage = 'Failed to generate PDF document. Please try again.';
-                logger.warn('PDF Generation Issue', { 
-                    originalError: error.message,
-                    pdfBlobExists: !!currentPdfBlob
-                });
             } else if (error.message.includes('Upload failed')) {
                 errorMessage = error.message;
-                logger.warn('Upload Issue', { originalError: error.message });
             } else if (error.message.includes('validation')) {
                 errorMessage = error.message;
-                logger.warn('Validation Issue', { originalError: error.message });
             }
             
             showError(errorMessage);
@@ -736,7 +639,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             yPos = margin;
                         }
 
-                        doc.addImage(screenshotDataUrl, 'PNG', margin, yPos, imgWidth, imgHeight);
+                        // Fix variable name - use the correct parameter
+                        const dataUrl = typeof screenshotData === 'string' ? screenshotData : screenshotData.dataUrl || screenshotData;
+                        doc.addImage(dataUrl, 'PNG', margin, yPos, imgWidth, imgHeight);
 
                         const pdfOutput = doc.output('blob');
                         resolve(pdfOutput);
@@ -744,7 +649,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     img.onerror = function() {
                         reject(new Error('Failed to load screenshot image'));
                     };
-                    img.src = screenshotDataUrl;
+                    // Fix variable name - use the correct parameter  
+                    const dataUrl = typeof screenshotData === 'string' ? screenshotData : screenshotData.dataUrl || screenshotData;
+                    img.src = dataUrl;
 
                 } catch (fallbackError) {
                     reject(fallbackError);
