@@ -164,9 +164,10 @@ class ScreenshotCapture {
    */
   async performCapture(tab, options) {
     return new Promise((resolve, reject) => {
+      const timeout = options.timeout || this.options.timeout || 30000;
       const timeoutId = setTimeout(() => {
-        reject(new Error(`Screenshot capture timeout after ${options.timeout}ms`));
-      }, options.timeout);
+        reject(new Error(`Screenshot capture timeout after ${timeout}ms`));
+      }, timeout);
 
       try {
         chrome.tabs.captureVisibleTab(tab.windowId, {
@@ -382,7 +383,7 @@ class ScreenshotCapture {
           });
           
           // Wait for scroll to settle and any lazy-loaded content
-          await this.delay(300);
+          await this.delay(500);
           
           // Capture visible area with high quality
           const dataUrl = await this.performCapture(tab, {
