@@ -298,26 +298,34 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     async function uploadPdf(pdfBlob, company, user) {
-        // Validate inputs
-        if (!pdfBlob || pdfBlob.size === 0) {
-            throw new Error('Invalid PDF data');
-        }
-        
-        if (pdfBlob.size > 10 * 1024 * 1024) { // 10MB limit
-            throw new Error('PDF file is too large (max 10MB)');
-        }
-        
-        const formData = new FormData();
-        formData.append('pdf', pdfBlob, `ProofVault_${Date.now()}.pdf`);
-        formData.append('company_name', sanitizeForPdf(company));
-        formData.append('username', sanitizeForPdf(user));
-        
-        const uploadUrl = API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.UPLOAD_PDF;
-        console.log('[PROOFVAULT] Uploading to:', uploadUrl);
-        const response = await fetchWithRetry(uploadUrl, {
-            method: 'POST',
-            body: formData
-        }, 3);
+        try {
+            alert('[DEBUG] Starting upload function - blob size: ' + pdfBlob.size);
+            
+            // Validate inputs
+            if (!pdfBlob || pdfBlob.size === 0) {
+                throw new Error('Invalid PDF data');
+            }
+            
+            if (pdfBlob.size > 10 * 1024 * 1024) { // 10MB limit
+                throw new Error('PDF file is too large (max 10MB)');
+            }
+            
+            alert('[DEBUG] Creating FormData...');
+            const formData = new FormData();
+            formData.append('pdf', pdfBlob, `ProofVault_${Date.now()}.pdf`);
+            formData.append('company_name', sanitizeForPdf(company));
+            formData.append('username', sanitizeForPdf(user));
+            
+            const uploadUrl = API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.UPLOAD_PDF;
+            console.log('[PROOFVAULT] Uploading to:', uploadUrl);
+            alert('[DEBUG] About to call fetchWithRetry to: ' + uploadUrl);
+            
+            const response = await fetchWithRetry(uploadUrl, {
+                method: 'POST',
+                body: formData
+            }, 3);
+            
+            alert('[DEBUG] fetchWithRetry completed, response status: ' + response.status);
         
         if (!response.ok) {
             let errorMessage = `Upload failed: ${response.status} ${response.statusText}`;
@@ -342,6 +350,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         return result;
+        } catch (error) {
+            alert('[DEBUG] Upload function error: ' + JSON.stringify({
+                message: error.message,
+                name: error.name,
+                type: typeof error,
+                toString: error.toString()
+            }));
+            throw error;
+        }
     }
     
     function showStatus(message, progress) {
@@ -627,11 +644,15 @@ document.addEventListener('DOMContentLoaded', function() {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 console.log(`[PROOFVAULT] API attempt ${attempt}/${maxRetries}`);
+                alert(`[DEBUG] fetchWithRetry attempt ${attempt}/${maxRetries} to ${url}`);
+                
                 const response = await fetchWithTimeout(url, options, 30000);
+                alert(`[DEBUG] fetchWithTimeout returned response with status: ${response.status}`);
                 return response;
             } catch (error) {
                 lastError = error;
                 console.warn(`[PROOFVAULT] Attempt ${attempt} failed:`, error.message);
+                alert(`[DEBUG] Attempt ${attempt} failed: ${error.message}`);
                 
                 if (attempt < maxRetries) {
                     // Wait before retrying (exponential backoff)
@@ -641,6 +662,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
+        
+        alert('[DEBUG] All retry attempts failed, throwing lastError: ' + JSON.stringify({
+            message: lastError.message,
+            name: lastError.name,
+            type: typeof lastError
+        }));
         
         throw lastError || new Error('All retry attempts failed');
     }
