@@ -218,7 +218,7 @@ class Logger {
       });
       
       try {
-        const response = await originalFetch(...args);
+        const response = await originalFetch.call(window, ...args);
         const endTime = Date.now();
         
         const networkLog = {

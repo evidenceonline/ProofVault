@@ -78,7 +78,7 @@ class ApiClient {
       
       console.log(`[API] Request ${requestId}: ${options.method || 'GET'} ${url}`);
       
-      const response = await fetch(url, requestOptions);
+      const response = await window.fetch.call(window, url, requestOptions);
       
       clearTimeout(timeoutId);
       this.activeRequests.delete(requestId);
@@ -526,6 +526,44 @@ class ApiClient {
     const pvRegex = /^PV_\d+_[a-z0-9]{9}$/i;
     
     return uuidRegex.test(id) || pvRegex.test(id);
+  }
+
+  /**
+   * Test function to verify fetch is working correctly
+   * This helps diagnose the "Illegal invocation" error
+   */
+  async testFetch() {
+    try {
+      console.log('[API] Testing fetch function...');
+      
+      // Test basic fetch call
+      const testUrl = 'data:text/plain;base64,dGVzdA=='; // "test" in base64
+      const response = await window.fetch.call(window, testUrl);
+      
+      if (response.ok) {
+        const text = await response.text();
+        console.log('[API] ✅ Basic fetch test passed:', text);
+        return { success: true, message: 'Fetch is working correctly' };
+      } else {
+        throw new Error(`Response not ok: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('[API] ❌ Fetch test failed:', error);
+      
+      if (error.message.includes('Illegal invocation')) {
+        return { 
+          success: false, 
+          message: 'Illegal invocation error still present',
+          error: error.message 
+        };
+      } else {
+        return { 
+          success: false, 
+          message: 'Different fetch error',
+          error: error.message 
+        };
+      }
+    }
   }
 }
 

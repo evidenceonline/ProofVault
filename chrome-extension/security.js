@@ -351,7 +351,7 @@ class SecurityManager {
       
       this.recordRequest(key);
       
-      return this.originalFetch(url, options);
+      return this.originalFetch.call(window, url, options);
     };
   }
 

@@ -606,7 +606,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const id = setTimeout(() => controller.abort(), timeout);
         
         try {
-            const response = await fetch(url, {
+            const response = await window.fetch.call(window, url, {
                 ...options,
                 signal: controller.signal
             });
