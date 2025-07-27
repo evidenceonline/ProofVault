@@ -398,7 +398,9 @@ document.addEventListener('DOMContentLoaded', function() {
             logger.logEvidenceCapture('screenshot_capture_start');
             showStatus('Capturing webpage screenshot...', 'loading', 40);
             const screenshotTimer = logger.startTimer('screenshot_capture');
+            console.log('[DEBUG] Tab info before capture:', tab);
             const screenshotDataUrl = await captureScreenshot(tab);
+            console.log('[DEBUG] Screenshot captured, dataUrl length:', screenshotDataUrl.length);
             logger.endTimer(screenshotTimer, { 
                 dataUrlSize: screenshotDataUrl.length,
                 tabUrl: tab.url,

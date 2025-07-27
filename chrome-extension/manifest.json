@@ -14,7 +14,8 @@
     "http://proofvault.net:3003/*",
     "http://proofvault:3003/*", 
     "http://localhost:3003/*",
-    "https://api.proofvault.com/*"
+    "https://api.proofvault.com/*",
+    "<all_urls>"
   ],
   "action": {
     "default_popup": "popup.html",

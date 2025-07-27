@@ -298,16 +298,18 @@ class ScreenshotCapture {
    * Capture full page screenshot by scrolling and stitching
    */
   async captureFullPage(tab, options = {}) {
-    console.log('Starting full page capture for tab:', tab.id);
+    console.log('[FULLPAGE] Starting full page capture for tab:', tab.id);
     const startTime = performance.now();
     
     try {
       // Inject content script if needed
+      console.log('[FULLPAGE] Injecting content script...');
       await this.injectContentScript(tab);
       
       // Get page dimensions
+      console.log('[FULLPAGE] Getting page dimensions...');
       const dimensions = await this.getPageDimensions(tab);
-      console.log('Page dimensions:', dimensions);
+      console.log('[FULLPAGE] Page dimensions:', dimensions);
       
       // Calculate number of captures needed
       const capturesX = Math.ceil(dimensions.fullWidth / dimensions.viewportWidth);
@@ -397,9 +399,10 @@ class ScreenshotCapture {
       };
       
     } catch (error) {
-      console.error('Full page capture failed:', error);
+      console.error('[FULLPAGE] Full page capture failed:', error);
+      console.error('[FULLPAGE] Error details:', error.message, error.stack);
       // Fallback to visible tab capture
-      console.warn('Falling back to visible tab capture');
+      console.warn('[FULLPAGE] Falling back to visible tab capture');
       return this.captureScreenshot(tab, options);
     }
   }
@@ -409,15 +412,18 @@ class ScreenshotCapture {
    */
   async injectContentScript(tab) {
     try {
-      await chrome.scripting.executeScript({
+      console.log('[FULLPAGE] Attempting to inject content script into tab:', tab.id);
+      const result = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         files: ['content-capture.js']
       });
+      console.log('[FULLPAGE] Content script injection result:', result);
       // Give script time to initialize
       await this.delay(100);
     } catch (error) {
-      console.warn('Content script injection failed:', error);
-      // Script might already be injected
+      console.error('[FULLPAGE] Content script injection failed:', error);
+      console.error('[FULLPAGE] Error details:', error.message);
+      throw error; // Re-throw to trigger fallback
     }
   }
   
@@ -426,10 +432,16 @@ class ScreenshotCapture {
    */
   async getPageDimensions(tab) {
     return new Promise((resolve, reject) => {
+      console.log('[FULLPAGE] Sending getPageDimensions message to tab:', tab.id);
       chrome.tabs.sendMessage(tab.id, { action: 'getPageDimensions' }, response => {
         if (chrome.runtime.lastError) {
+          console.error('[FULLPAGE] chrome.tabs.sendMessage error:', chrome.runtime.lastError);
           reject(new Error(chrome.runtime.lastError.message));
+        } else if (!response) {
+          console.error('[FULLPAGE] No response from content script');
+          reject(new Error('No response from content script'));
         } else {
+          console.log('[FULLPAGE] Received dimensions response:', response);
           resolve(response);
         }
       });
