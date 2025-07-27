@@ -9,6 +9,7 @@ interface EvidenceRecord {
   pdf_filename: string;
   created_at: string;
   pdf_hash?: string;
+  file_id?: string;
 }
 
 interface SortConfig {
@@ -74,7 +75,8 @@ export default function HomePage() {
         record.company_name.toLowerCase().includes(searchLower) ||
         record.username.toLowerCase().includes(searchLower) ||
         record.id.toLowerCase().includes(searchLower) ||
-        record.pdf_filename.toLowerCase().includes(searchLower)
+        record.pdf_filename.toLowerCase().includes(searchLower) ||
+        (record.file_id && record.file_id.toLowerCase().includes(searchLower))
       );
     }
 
@@ -313,7 +315,7 @@ export default function HomePage() {
                     id="search"
                     type="text"
                     className="form-input"
-                    placeholder="Search by company, username, ID, or filename..."
+                    placeholder="Search by company, username, ID, filename, or file ID..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     aria-describedby="search-description"
@@ -486,6 +488,17 @@ export default function HomePage() {
                     <th 
                       role="columnheader"
                       tabIndex={0}
+                      onClick={() => handleSort('file_id')}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSort('file_id')}
+                      aria-sort={sortConfig.key === 'file_id' ? sortConfig.direction : 'none'}
+                      className="sortable"
+                      style={{ cursor: 'pointer' }}
+                    >
+                      File ID {getSortIcon('file_id')}
+                    </th>
+                    <th 
+                      role="columnheader"
+                      tabIndex={0}
                       onClick={() => handleSort('created_at')}
                       onKeyDown={(e) => e.key === 'Enter' && handleSort('created_at')}
                       aria-sort={sortConfig.key === 'created_at' ? sortConfig.direction : 'none'}
@@ -511,6 +524,9 @@ export default function HomePage() {
                       </td>
                       <td role="gridcell" className="username">
                         {record.username}
+                      </td>
+                      <td role="gridcell" className="file-id">
+                        {record.file_id || 'N/A'}
                       </td>
                       <td role="gridcell" className="date-time">
                         <time dateTime={record.created_at}>
@@ -618,6 +634,13 @@ export default function HomePage() {
                 <div className="detail-label">PDF Filename</div>
                 <div className="detail-value">{viewModalData.pdf_filename}</div>
               </div>
+              
+              {viewModalData.file_id && (
+                <div className="detail-item">
+                  <div className="detail-label">File ID</div>
+                  <div className="detail-value">{viewModalData.file_id}</div>
+                </div>
+              )}
               
               <div className="detail-item">
                 <div className="detail-label">Created Date & Time</div>

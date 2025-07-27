@@ -317,6 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Start overall evidence capture timer
         const captureTimer = logger.startTimer('evidence_capture_complete');
+        let sanitizedData = null; // Declare outside try block for error handling
         
         try {
             logger.info('Evidence Capture Started', {
@@ -362,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }, true);
 
             // Use sanitized values
-            const sanitizedData = formValidation.sanitized;
+            sanitizedData = formValidation.sanitized;
             
             isProcessing = true;
             updateButtonState();

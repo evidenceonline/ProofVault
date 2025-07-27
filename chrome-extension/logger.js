@@ -90,27 +90,27 @@ class Logger {
     // Override console methods
     console.log = (...args) => {
       this.originalConsole.log(...args);
-      this.logToStorage('INFO', 'console.log', args);
+      this.logMessage('INFO', 'console.log', args);
     };
     
     console.info = (...args) => {
       this.originalConsole.info(...args);
-      this.logToStorage('INFO', 'console.info', args);
+      this.logMessage('INFO', 'console.info', args);
     };
     
     console.warn = (...args) => {
       this.originalConsole.warn(...args);
-      this.logToStorage('WARN', 'console.warn', args);
+      this.logMessage('WARN', 'console.warn', args);
     };
     
     console.error = (...args) => {
       this.originalConsole.error(...args);
-      this.logToStorage('ERROR', 'console.error', args);
+      this.logMessage('ERROR', 'console.error', args);
     };
     
     console.debug = (...args) => {
       this.originalConsole.debug(...args);
-      this.logToStorage('DEBUG', 'console.debug', args);
+      this.logMessage('DEBUG', 'console.debug', args);
     };
   }
 

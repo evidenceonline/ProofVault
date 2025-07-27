@@ -1,5 +1,5 @@
 const API_CONFIG = {
-  BASE_URL: 'http://proofvault.net:3001/api',
+  BASE_URL: 'http://localhost:3003/api',
   ENDPOINTS: {
     UPLOAD_PDF: '/pdf/upload',
     LIST_PDFS: '/pdf/list',

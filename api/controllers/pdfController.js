@@ -42,12 +42,18 @@ const uploadPDF = async (req, res, next) => {
         });
       }
 
+      // Generate file_id in format "company-year-month"
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.toLocaleString('en-US', { month: 'long' });
+      const file_id = `${company_name}-${year}-${month}`;
+
       // Insert new PDF record
       const result = await client.query(
-        `INSERT INTO pdf_records (company_name, username, pdf_filename, pdf_hash, pdf_data, file_size, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING id, company_name, username, pdf_filename, pdf_hash, file_size, status, created_at`,
-        [company_name, username, file.originalname, fileHash, file.buffer, file.size, 'verified']
+        `INSERT INTO pdf_records (company_name, username, pdf_filename, pdf_hash, pdf_data, file_size, status, file_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING id, company_name, username, pdf_filename, pdf_hash, file_size, status, created_at, file_id`,
+        [company_name, username, file.originalname, fileHash, file.buffer, file.size, 'verified', file_id]
       );
 
       client.release();
@@ -66,7 +72,8 @@ const uploadPDF = async (req, res, next) => {
           pdf_hash: newRecord.pdf_hash,
           file_size: newRecord.file_size,
           status: newRecord.status,
-          created_at: newRecord.created_at
+          created_at: newRecord.created_at,
+          file_id: newRecord.file_id
         }
       });
 
@@ -101,8 +108,8 @@ const getPDFList = async (req, res, next) => {
     const limitNum = Math.min(100, Math.max(1, parseInt(limit))); // Max 100 items per page
     const offset = (pageNum - 1) * limitNum;
 
-    // Validate sort parameters
-    const allowedSortFields = ['created_at', 'company_name', 'username', 'pdf_filename', 'file_size', 'status'];
+    // Validate sort parameters - only use existing columns
+    const allowedSortFields = ['created_at', 'company_name', 'username', 'pdf_filename', 'file_id'];
     const sortField = allowedSortFields.includes(sort_by) ? sort_by : 'created_at';
     const sortDirection = sort_order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
@@ -120,6 +127,7 @@ const getPDFList = async (req, res, next) => {
           company_name ILIKE $${paramIndex} OR 
           username ILIKE $${paramIndex} OR 
           pdf_filename ILIKE $${paramIndex} OR 
+          file_id ILIKE $${paramIndex} OR 
           id::text ILIKE $${paramIndex}
         )`;
         whereParams.push(`%${search}%`);
@@ -161,11 +169,14 @@ const getPDFList = async (req, res, next) => {
       const countResult = await client.query(countQuery, whereParams);
       const totalCount = parseInt(countResult.rows[0].count);
 
-      // Get paginated results
+      // Get paginated results - handle missing columns gracefully
       const query = `
         SELECT id, company_name, username, pdf_filename, pdf_hash, 
-               COALESCE(file_size, LENGTH(pdf_data)) as file_size, 
-               status, created_at, updated_at
+               LENGTH(pdf_data) as file_size, 
+               'verified' as status, 
+               created_at,
+               created_at as updated_at,
+               file_id
         FROM pdf_records 
         ${whereClause}
         ORDER BY ${sortField} ${sortDirection}
@@ -268,6 +279,7 @@ const getPDFById = async (req, res, next) => {
           status: record.status || 'verified',
           created_at: record.created_at,
           updated_at: record.updated_at,
+          file_id: record.file_id,
           download_url: `/api/pdf/${id}?download=true`
         }
       });

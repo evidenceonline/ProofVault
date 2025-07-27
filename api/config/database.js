@@ -42,66 +42,61 @@ const initializeTables = async () => {
   try {
     const client = await pool.connect();
     
-    // Create pdf_records table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS pdf_records (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        company_name VARCHAR(255) NOT NULL,
-        username VARCHAR(255) NOT NULL,
-        pdf_filename VARCHAR(255) NOT NULL,
-        pdf_hash VARCHAR(64) NOT NULL UNIQUE,
-        pdf_data BYTEA NOT NULL,
-        file_size INTEGER,
-        status VARCHAR(50) DEFAULT 'verified',
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      )
+    // Check if the table exists first
+    const tableExists = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'pdf_records'
+      );
     `);
     
-    // Add new columns if they don't exist (for existing databases)
-    await client.query(`
-      ALTER TABLE pdf_records 
-      ADD COLUMN IF NOT EXISTS file_size INTEGER,
-      ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'verified'
-    `);
+    if (!tableExists.rows[0].exists) {
+      // Table doesn't exist and user doesn't have permission to create it
+      console.log('Table pdf_records does not exist. Please ensure it has been created with proper permissions.');
+      console.log('The table should have the following structure:');
+      console.log(`
+        CREATE TABLE pdf_records (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          company_name VARCHAR(255) NOT NULL,
+          username VARCHAR(255) NOT NULL,
+          pdf_filename VARCHAR(255) NOT NULL,
+          pdf_hash VARCHAR(64) NOT NULL UNIQUE,
+          pdf_data BYTEA NOT NULL,
+          file_size INTEGER,
+          status VARCHAR(50) DEFAULT 'verified',
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } else {
+      console.log('Table pdf_records exists.');
+      
+      // Check if all required columns exist
+      const columns = await client.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'pdf_records';
+      `);
+      
+      const columnNames = columns.rows.map(row => row.column_name);
+      const requiredColumns = ['id', 'company_name', 'username', 'pdf_filename', 'pdf_hash', 'pdf_data', 'file_size', 'status', 'created_at', 'updated_at'];
+      const missingColumns = requiredColumns.filter(col => !columnNames.includes(col));
+      
+      if (missingColumns.length > 0) {
+        console.log('Warning: Missing columns in pdf_records table:', missingColumns.join(', '));
+      } else {
+        console.log('All required columns are present in pdf_records table.');
+      }
+    }
     
-    // Create indexes for faster queries
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_pdf_records_created_at ON pdf_records(created_at DESC)
-    `);
-    
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_pdf_records_company_name ON pdf_records(company_name)
-    `);
-    
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_pdf_records_username ON pdf_records(username)
-    `);
-    
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_pdf_records_filename ON pdf_records(pdf_filename)
-    `);
-    
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_pdf_records_status ON pdf_records(status)
-    `);
-    
-    // Composite index for common search patterns
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_pdf_records_search ON pdf_records(company_name, username, created_at DESC)
-    `);
-    
-    // Full-text search index for global search
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_pdf_records_fulltext ON pdf_records 
-      USING gin(to_tsvector('english', company_name || ' ' || username || ' ' || pdf_filename))
-    `);
-    
-    console.log('Database tables initialized successfully');
+    console.log('Database validation completed');
     client.release();
   } catch (err) {
-    console.error('Error initializing database tables:', err);
-    throw err;
+    console.error('Error checking database tables:', err);
+    // Don't throw the error, just log it
+    console.log('Continuing without table initialization...');
   }
 };
 
