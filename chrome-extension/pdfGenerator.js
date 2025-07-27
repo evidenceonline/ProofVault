@@ -28,6 +28,10 @@ class PdfGenerator {
     this.pageHeight = 0;
     this.currentY = 0;
     this.metadata = {};
+    
+    // CRITICAL: Concurrency protection
+    this.isGenerating = false;
+    this.generationId = null;
   }
 
   /**
@@ -36,17 +40,30 @@ class PdfGenerator {
   async generatePdf(company, user, id, screenshotData, url, title, options = {}) {
     const startTime = performance.now();
     
+    // CRITICAL: Prevent concurrent PDF generation
+    if (this.isGenerating) {
+      throw new Error('PDF generation already in progress - concurrent generation prevented');
+    }
+    
+    // Generate unique ID for this generation process
+    const generationId = `pdf_gen_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    this.generationId = generationId;
+    this.isGenerating = true;
+    
     try {
-      console.log('Starting PDF generation...');
+      console.log(`Starting PDF generation with ID: ${generationId}`);
       
       // Initialize PDF document
       this.initializePdf();
       
-      // Verify initialization was successful
+      // Verify initialization was successful and generation ID hasn't been corrupted
       if (!this.doc) {
         throw new Error('PDF initialization failed - document is null after initialization');
       }
-      console.log('PDF document initialized successfully');
+      if (this.generationId !== generationId) {
+        throw new Error('PDF generation corrupted - generation ID mismatch detected');
+      }
+      console.log(`PDF document initialized successfully for generation: ${generationId}`);
       
       // Set metadata
       this.setMetadata(company, user, id, url, title);
@@ -57,25 +74,35 @@ class PdfGenerator {
       // Add evidence details
       this.addEvidenceDetails(company, user, id, url, title);
       
+      // Validate generation state before processing screenshots
+      if (this.generationId !== generationId || !this.doc) {
+        throw new Error('PDF generation state corrupted before screenshot processing');
+      }
+      
       // Check if we have multiple screenshots or a single one
       if (screenshotData && screenshotData.isMultipleScreenshots && screenshotData.screenshots) {
-        await this.addMultipleScreenshots(screenshotData.screenshots, screenshotData.metadata);
+        await this.addMultipleScreenshots(screenshotData.screenshots, screenshotData.metadata, generationId);
       } else {
         // Handle single screenshot (backward compatibility)
         const dataUrl = typeof screenshotData === 'string' ? screenshotData : screenshotData.dataUrl;
-        await this.addOptimizedScreenshot(dataUrl);
+        await this.addOptimizedScreenshot(dataUrl, generationId);
+      }
+      
+      // Final validation before footer and blob generation
+      if (this.generationId !== generationId || !this.doc) {
+        throw new Error('PDF generation state corrupted before finalizing');
       }
       
       // Add legal footer
       this.addLegalFooter();
       
-      // Generate final PDF blob
+      // Generate final PDF blob with validation
       const pdfBlob = this.generateBlob();
       
       const endTime = performance.now();
       const processingTime = Math.round(endTime - startTime);
       
-      console.log(`PDF generated successfully in ${processingTime}ms`);
+      console.log(`PDF generated successfully in ${processingTime}ms with ID: ${generationId}`);
       
       return {
         blob: pdfBlob,
@@ -83,14 +110,18 @@ class PdfGenerator {
           ...this.metadata,
           processingTime,
           fileSize: pdfBlob.size,
-          pages: this.doc.internal.getNumberOfPages()
+          pages: this.doc.internal.getNumberOfPages(),
+          generationId
         }
       };
       
     } catch (error) {
-      console.error('PDF generation failed:', error);
+      console.error(`PDF generation failed for ID ${generationId}:`, error);
       throw new Error(`PDF generation failed: ${error.message}`);
     } finally {
+      // CRITICAL: Always reset generation state
+      this.isGenerating = false;
+      this.generationId = null;
       this.cleanup();
     }
   }
@@ -274,9 +305,14 @@ class PdfGenerator {
   /**
    * Add optimized screenshot with memory management
    */
-  async addOptimizedScreenshot(screenshotDataUrl) {
+  async addOptimizedScreenshot(screenshotDataUrl, generationId = null) {
     try {
       console.log('Processing screenshot for PDF...');
+      
+      // Validate document state if generation ID is provided
+      if (generationId && (this.generationId !== generationId || !this.doc)) {
+        throw new Error(`PDF document state corrupted during screenshot processing for generation ${generationId}`);
+      }
       
       this.doc.setFontSize(this.options.fontSize.header);
       this.doc.setFont(undefined, 'bold');
@@ -334,7 +370,7 @@ class PdfGenerator {
   /**
    * Add multiple screenshots to PDF with section headers
    */
-  async addMultipleScreenshots(screenshots, captureMetadata) {
+  async addMultipleScreenshots(screenshots, captureMetadata, generationId = null) {
     try {
       console.log(`Adding ${screenshots.length} screenshots to PDF...`);
       
@@ -343,12 +379,22 @@ class PdfGenerator {
         throw new Error('PDF document is null before processing screenshots');
       }
       
+      // Validate generation ID if provided
+      if (generationId && this.generationId !== generationId) {
+        throw new Error(`PDF generation ID mismatch at start of multiple screenshots processing: expected ${generationId}, got ${this.generationId}`);
+      }
+      
       for (let i = 0; i < screenshots.length; i++) {
         const screenshot = screenshots[i];
         
         // Critical: Re-verify PDF document is still valid at each iteration
         if (!this.doc) {
           throw new Error(`PDF document became null at screenshot ${i + 1}/${screenshots.length}`);
+        }
+        
+        // Critical: Re-verify generation ID hasn't been corrupted
+        if (generationId && this.generationId !== generationId) {
+          throw new Error(`PDF generation ID mismatch at screenshot ${i + 1}/${screenshots.length}: expected ${generationId}, got ${this.generationId}`);
         }
         
         // Defensive check: Ensure PDF document has required methods
@@ -751,6 +797,7 @@ class PdfGenerator {
     this.doc = null;
     this.metadata = {};
     this.currentY = 0;
+    // Note: isGenerating and generationId are reset in the finally block of generatePdf
   }
 }
 

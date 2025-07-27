@@ -73,6 +73,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /** @type {boolean} Processing state flag */
     let isProcessing = false;
+    
+    /** @type {boolean} Global PDF generation lock */
+    let isPdfGenerating = false;
+    
+    /** @type {string|null} Current generation session ID */
+    let currentGenerationSession = null;
 
     // Initialize application
     loadSavedData();
@@ -274,7 +280,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function showError(message) {
         showStatus(message, 'error', 0);
         
-        // Reset processing state after a delay
+        // CRITICAL: Immediate state cleanup for errors
+        // Reset processing flags immediately to prevent permanent lock
+        isProcessing = false;
+        isPdfGenerating = false;
+        currentGenerationSession = null;
+        updateButtonState();
+        
+        // Reset to capture state after a delay for user feedback
         setTimeout(() => {
             resetToCapture();
         }, 3000);
@@ -288,8 +301,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show capture section
         captureSection.classList.remove('hide');
         
-        // Reset state
+        // CRITICAL: Complete state reset
         isProcessing = false;
+        isPdfGenerating = false;
+        currentGenerationSession = null;
         vaultBtn.classList.remove('loading');
         currentPdfBlob = null;
         currentId = null;
@@ -299,6 +314,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Focus first input
         companyInput.focus();
+        
+        console.log('[POPUP] Complete state reset - ready for new capture');
     }
 
     /**
@@ -318,6 +335,17 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     async function handleVaultClick() {
         console.log('[POPUP] Vault click handler started');
+        
+        // CRITICAL: Double-click protection - check and set processing state immediately
+        if (isProcessing) {
+            console.warn('[POPUP] Evidence capture already in progress - ignoring duplicate click');
+            return;
+        }
+        
+        // Set processing flag immediately to prevent concurrent executions
+        isProcessing = true;
+        updateButtonState();
+        
         const company = companyInput.value.trim();
         const user = userInput.value.trim();
         
@@ -358,9 +386,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Use sanitized values
             sanitizedData = formValidation.sanitized;
             
-            isProcessing = true;
-            updateButtonState();
-            
             // Step 1: Check API health
             showStatus('Connecting to ProofVault servers...', 'loading', 10);
             await apiClient.checkHealth();
@@ -374,6 +399,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Step 3: Capture screenshot
             showStatus('Capturing webpage screenshot...', 'loading', 40);
+            
+            // SAFETY CHECK: Verify we're still processing and haven't been interrupted
+            if (!isProcessing) {
+                throw new Error('Evidence capture was interrupted during screenshot phase');
+            }
+            
             console.log('[DEBUG] Tab info before capture:', tab);
             const screenshotDataUrl = await captureScreenshot(tab);
             
@@ -389,6 +420,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             await delay(500);
             
+            // SAFETY CHECK: Verify we're still processing after screenshot capture
+            if (!isProcessing) {
+                throw new Error('Evidence capture was interrupted after screenshot capture');
+            }
+            
             // Step 4: Generate PDF with sanitized data
             
             // Update status based on screenshot type
@@ -398,25 +434,61 @@ document.addEventListener('DOMContentLoaded', function() {
                 showStatus('Generating authenticated PDF document...', 'loading', 65);
             }
             
-            const pdfBlob = await generatePdf(
-                sanitizedData.organization, 
-                sanitizedData.user, 
-                id, 
-                screenshotDataUrl, // This now can be either a string (single) or an object (multiple screenshots)
-                sanitizedData.url, 
-                sanitizedData.title
-            );
+            let pdfBlob = null;
+            let pdfGenerationAttempts = 0;
+            const maxPdfAttempts = 2;
             
-            // Validate generated PDF
-            const pdfValidation = validator.validatePdfBlob(pdfBlob);
+            // PDF generation with retry logic for robustness
+            while (pdfGenerationAttempts < maxPdfAttempts && !pdfBlob) {
+                pdfGenerationAttempts++;
+                try {
+                    console.log(`PDF generation attempt ${pdfGenerationAttempts}/${maxPdfAttempts}`);
+                    
+                    pdfBlob = await generatePdf(
+                        sanitizedData.organization, 
+                        sanitizedData.user, 
+                        id, 
+                        screenshotDataUrl, // This now can be either a string (single) or an object (multiple screenshots)
+                        sanitizedData.url, 
+                        sanitizedData.title
+                    );
+                    
+                    // Validate generated PDF
+                    const pdfValidation = validator.validatePdfBlob(pdfBlob);
+                    
+                    if (!pdfValidation.isValid) {
+                        throw new Error(`PDF validation failed: ${pdfValidation.errors[0]}`);
+                    }
+                    
+                    console.log(`PDF generated successfully on attempt ${pdfGenerationAttempts}`);
+                    break; // Success - exit retry loop
+                    
+                } catch (pdfError) {
+                    console.error(`PDF generation attempt ${pdfGenerationAttempts} failed:`, pdfError);
+                    
+                    if (pdfGenerationAttempts >= maxPdfAttempts) {
+                        throw new Error(`PDF generation failed after ${maxPdfAttempts} attempts: ${pdfError.message}`);
+                    }
+                    
+                    // Wait before retry
+                    await delay(1000);
+                    showStatus(`Retrying PDF generation (attempt ${pdfGenerationAttempts + 1}/${maxPdfAttempts})...`, 'loading', 60);
+                }
+            }
             
-            if (!pdfValidation.isValid) {
-                throw new Error(`PDF validation failed: ${pdfValidation.errors[0]}`);
+            // Ensure we have a valid PDF blob before proceeding
+            if (!pdfBlob) {
+                throw new Error('PDF generation failed - no valid PDF blob created');
             }
             
             currentPdfBlob = pdfBlob;
             await delay(500);
 
+            // SAFETY CHECK: Verify we're still processing before upload
+            if (!isProcessing) {
+                throw new Error('Evidence capture was interrupted before upload');
+            }
+            
             // Step 5: Upload to server with sanitized metadata
             showStatus('Uploading to ProofVault secure storage...', 'loading', 85);
             const uploadResponse = await apiClient.uploadPdf(pdfBlob, {
@@ -426,10 +498,17 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             if (uploadResponse.success) {
+                // FINAL SAFETY CHECK: Verify we completed successfully without interruption
+                if (!isProcessing) {
+                    console.warn('Upload succeeded but processing state was reset - this indicates potential race condition');
+                }
+                
                 showStatus('Evidence successfully captured and verified', 'loading', 100);
                 await delay(800);
                 showResult(uploadResponse.data.id);
                 currentId = uploadResponse.data.id;
+                
+                console.log('[POPUP] Evidence capture completed successfully - PDF uploaded with ID:', uploadResponse.data.id);
             } else {
                 throw new Error('Upload failed: ' + uploadResponse.message);
             }
@@ -443,7 +522,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             let errorMessage = 'An unexpected error occurred during evidence capture.';
             
-            if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('timeout')) {
+            if (error.message.includes('concurrent') || error.message.includes('already in progress') || error.message.includes('interrupted')) {
+                errorMessage = 'Evidence capture process was interrupted. Please wait a moment and try again.';
+            } else if (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('timeout')) {
                 errorMessage = 'Cannot connect to ProofVault servers. Please check your internet connection and try again.';
             } else if (error.message.includes('screenshot') || error.message.includes('captureVisibleTab')) {
                 errorMessage = 'Unable to capture webpage screenshot. Please ensure the page is fully loaded and try again.';
@@ -456,6 +537,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             showError(errorMessage);
+        } finally {
+            // CRITICAL: Always reset processing state to allow future captures
+            // This ensures that even if errors occur, the user can try again
+            if (isProcessing) {
+                console.log('[POPUP] Resetting processing state in finally block');
+                isProcessing = false;
+                updateButtonState();
+            }
         }
     }
 
@@ -466,7 +555,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function categorizeError(error) {
         const message = error.message.toLowerCase();
         
-        if (message.includes('network') || message.includes('fetch') || message.includes('timeout')) {
+        if (message.includes('concurrent') || message.includes('already in progress') || message.includes('interrupted') || message.includes('corrupted')) {
+            return 'concurrency';
+        } else if (message.includes('network') || message.includes('fetch') || message.includes('timeout')) {
             return 'network';
         } else if (message.includes('screenshot') || message.includes('capture')) {
             return 'screenshot';
@@ -563,8 +654,18 @@ document.addEventListener('DOMContentLoaded', function() {
      * @returns {Promise<Blob>} Generated PDF blob
      */
     async function generatePdf(company, user, id, screenshotData, url, title) {
+        // CRITICAL: Application-level PDF generation mutex
+        if (isPdfGenerating) {
+            throw new Error('PDF generation already in progress at application level - concurrent generation prevented');
+        }
+        
+        // Create unique session ID for this generation
+        const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        currentGenerationSession = sessionId;
+        isPdfGenerating = true;
+        
         try {
-            console.log('Starting optimized PDF generation...');
+            console.log(`Starting optimized PDF generation with session ID: ${sessionId}`);
             
             // Get browser-specific PDF options
             const browserOptions = browserCompatibility.getPdfOptions();
@@ -583,13 +684,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             );
             
-            console.log('PDF generated with metadata:', result.metadata);
+            // Validate session wasn't corrupted
+            if (currentGenerationSession !== sessionId) {
+                throw new Error(`PDF generation session corrupted: expected ${sessionId}, got ${currentGenerationSession}`);
+            }
+            
+            console.log(`PDF generated successfully with metadata for session ${sessionId}:`, result.metadata);
             return result.blob;
             
         } catch (error) {
-            console.error('Optimized PDF generation failed:', error);
+            console.error(`Optimized PDF generation failed for session ${sessionId}:`, error);
             
-            // Fallback to basic PDF generation
+            // Fallback to basic PDF generation (still within the same session)
             return new Promise((resolve, reject) => {
                 try {
                     const { jsPDF } = window.jspdf;
@@ -657,6 +763,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     reject(fallbackError);
                 }
             });
+        } finally {
+            // CRITICAL: Always reset PDF generation mutex to allow future generations
+            console.log(`Resetting PDF generation mutex for session ${sessionId}`);
+            isPdfGenerating = false;
+            currentGenerationSession = null;
         }
     }
 
