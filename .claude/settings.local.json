@@ -17,7 +17,11 @@
       "Bash(pkill:*)",
       "Bash(PGPASSWORD=phoenixserg psql -h localhost -U proofvaultuser -d proofvaultdb -c \"SELECT id, company_name, LENGTH(pdf_data) as pdf_size_bytes FROM pdf_records ORDER BY created_at DESC LIMIT 3;\")",
       "Bash(pdfinfo:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npm run dev:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

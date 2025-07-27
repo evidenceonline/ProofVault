@@ -17,7 +17,12 @@
  * @requires Logger - Comprehensive logging and performance tracking
  */
 
+console.log('[POPUP] Script loading started');
+alert('[DEBUG] PopupJS script is loading!');
+
 document.addEventListener('DOMContentLoaded', function() {
+    alert('[DEBUG] DOM content loaded!');
+    console.log('[POPUP] DOM content loaded');
     // Element references
     const companyInput = document.getElementById('company');
     const userInput = document.getElementById('user');
@@ -55,7 +60,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentId = null;
     
     /** @type {ApiClient} Secure API client instance */
+    console.log('[POPUP] Creating API client');
     let apiClient = new ApiClient();
+    console.log('[POPUP] API client created:', apiClient);
     
     /** @type {ScreenshotCapture} Optimized screenshot capture utility */
     let screenshotCapture = new ScreenshotCapture();
@@ -312,8 +319,11 @@ document.addEventListener('DOMContentLoaded', function() {
      * @throws {Error} Various errors for different failure modes
      */
     async function handleVaultClick() {
+        console.log('[POPUP] Vault click handler started');
         const company = companyInput.value.trim();
         const user = userInput.value.trim();
+        
+        console.log('[POPUP] Form values:', { company, user });
         
         // Start overall evidence capture timer
         const captureTimer = logger.startTimer('evidence_capture_complete');

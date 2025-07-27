@@ -161,7 +161,15 @@ class ApiClient {
    */
   validateUrl(url) {
     try {
+      console.log('[API] Validating URL:', url);
       const urlObj = new URL(url);
+      
+      console.log('[API] URL parsed:', {
+        protocol: urlObj.protocol,
+        hostname: urlObj.hostname,
+        port: urlObj.port,
+        pathname: urlObj.pathname
+      });
       
       // Only allow HTTP/HTTPS
       if (!['http:', 'https:'].includes(urlObj.protocol)) {
@@ -178,14 +186,23 @@ class ApiClient {
       ];
       
       const isAllowed = allowedHosts.some(host => 
-        urlObj.hostname === host || urlObj.hostname.endsWith(`:${host}`)
+        urlObj.hostname === host
       );
+      
+      console.log('[API] Host validation:', {
+        hostname: urlObj.hostname,
+        allowedHosts,
+        isAllowed
+      });
       
       if (!isAllowed) {
         throw new Error(`Host not allowed: ${urlObj.hostname}`);
       }
       
+      console.log('[API] URL validation passed');
+      
     } catch (error) {
+      console.error('[API] URL validation failed:', error);
       throw new ApiError(`Invalid URL: ${error.message}`, 400, { url });
     }
   }
@@ -453,8 +470,13 @@ class ApiClient {
   async checkHealth() {
     try {
       const url = `${this.baseUrl}${API_CONFIG.ENDPOINTS.HEALTH}`;
+      console.log('[API] Health check starting, URL:', url);
+      console.log('[API] Base URL:', this.baseUrl);
+      console.log('[API] Health endpoint:', API_CONFIG.ENDPOINTS.HEALTH);
+      
       const response = await this.makeRequest(url, {}, 0); // No retries for health check
-
+      console.log('[API] Health check response received');
+      
       return response.json();
       
     } catch (error) {

@@ -1,3 +1,5 @@
+console.log('[CONFIG] Loading API configuration');
+
 const API_CONFIG = {
   BASE_URL: 'http://localhost:3003/api',
   ENDPOINTS: {
@@ -11,4 +13,5 @@ const API_CONFIG = {
   MAX_RETRIES: 3
 };
 
+console.log('[CONFIG] API configuration loaded:', API_CONFIG);
 window.API_CONFIG = API_CONFIG;

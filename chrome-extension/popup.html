@@ -171,15 +171,45 @@
         </footer>
     </div>
     
-    <script src="jspdf.umd.min.js"></script>
     <script src="config.js"></script>
-    <script src="browserCompatibility.js"></script>
-    <script src="logger.js"></script>
-    <script src="api.js"></script>
-    <script src="screenshotCapture.js"></script>
-    <script src="pdfGenerator.js"></script>
-    <script src="validator.js"></script>
-    <script src="security.js"></script>
-    <script src="popup.js"></script>
+    <script>
+        // Simple test without dependencies
+        alert('SIMPLE: Extension is loading!');
+        console.log('SIMPLE: Extension is loading!');
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            alert('SIMPLE: DOM loaded!');
+            console.log('SIMPLE: DOM loaded!');
+            
+            // Get the form elements
+            const vaultBtn = document.getElementById('vaultBtn');
+            const companyInput = document.getElementById('company');
+            const userInput = document.getElementById('user');
+            
+            if (vaultBtn) {
+                vaultBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    alert('SIMPLE: Button clicked! Company: ' + companyInput.value + ', User: ' + userInput.value);
+                    console.log('SIMPLE: Button clicked!', { company: companyInput.value, user: userInput.value });
+                    
+                    // Simple fetch test
+                    fetch('http://localhost:3003/api/health')
+                        .then(response => {
+                            alert('SIMPLE: API responded with status ' + response.status);
+                            console.log('SIMPLE: API response:', response);
+                            return response.json();
+                        })
+                        .then(data => {
+                            alert('SIMPLE: API data received: ' + JSON.stringify(data));
+                            console.log('SIMPLE: API data:', data);
+                        })
+                        .catch(error => {
+                            alert('SIMPLE: API error: ' + error.message);
+                            console.error('SIMPLE: API error:', error);
+                        });
+                });
+            }
+        });
+    </script>
 </body>
 </html>
