@@ -3,13 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProofVault - Legal Evidence Capture</title>
+    <title>ProofVault Test - Legal Evidence Capture</title>
     <link rel="stylesheet" href="popup.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Test-specific styles */
+        body {
+            margin: 20px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .test-note {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 10px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 500;
+        }
+    </style>
 </head>
 <body>
+    <div class="test-note">
+        TEST MODE - Chrome Extension Preview
+    </div>
+    
     <div class="app-container">
         <!-- Header Section -->
         <header class="app-header">
@@ -47,6 +68,7 @@
                                id="company" 
                                class="form-input" 
                                placeholder="Enter your organization name" 
+                               value="Acme Legal Firm"
                                required 
                                autocomplete="organization"
                                aria-describedby="company-help">
@@ -65,6 +87,7 @@
                                id="user" 
                                class="form-input" 
                                placeholder="Enter the authenticated user name" 
+                               value="John Smith, Esq."
                                required 
                                autocomplete="name"
                                aria-describedby="user-help">
@@ -86,80 +109,6 @@
                     <div class="button-help" id="vault-help">Captures current webpage and generates authenticated PDF evidence with complete metadata</div>
                 </form>
             </section>
-
-            <!-- Status Section -->
-            <section class="status-section" id="statusSection">
-                <div class="status-card" id="statusCard">
-                    <div class="status-icon" id="statusIcon">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 3V6M12 18V21M4.22 4.22L6.34 6.34M17.66 17.66L19.78 19.78M3 12H6M18 12H21M4.22 19.78L6.34 17.66M17.66 6.34L19.78 4.22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </div>
-                    <div class="status-content">
-                        <h3 class="status-title" id="statusTitle">Processing...</h3>
-                        <p class="status-message" id="statusMessage">Initializing evidence capture process</p>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="progressFill"></div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Success Section -->
-            <section class="result-section" id="resultSection">
-                <div class="success-card">
-                    <div class="success-header">
-                        <div class="success-icon">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </div>
-                        <div class="success-content">
-                            <h3 class="success-title">Evidence Successfully Captured</h3>
-                            <p class="success-message">Your evidence has been securely processed and stored in ProofVault</p>
-                        </div>
-                    </div>
-                    
-                    <div class="evidence-details">
-                        <div class="detail-item">
-                            <span class="detail-label">Evidence ID:</span>
-                            <code class="evidence-id" id="generatedId">PV_123456789_abc</code>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Timestamp:</span>
-                            <span class="detail-value" id="captureTimestamp">—</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Status:</span>
-                            <span class="status-badge verified">Verified & Secured</span>
-                        </div>
-                    </div>
-
-                    <div class="action-buttons">
-                        <button id="downloadBtn" class="secondary-button">
-                            <svg class="button-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M7 10L12 15M12 15L17 10M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            Download PDF
-                        </button>
-                        
-                        <button id="viewOnlineBtn" class="primary-button outline">
-                            <svg class="button-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M10 13C10 14.1046 10.8954 15 12 15C13.1046 15 14 14.1046 14 13C14 11.8954 13.1046 11 12 11C10.8954 11 10 11.8954 10 13Z" stroke="currentColor" stroke-width="2"/>
-                                <path d="M21 13C18.6 16.4 15.6 18 12 18C8.4 18 5.4 16.4 3 13C5.4 9.6 8.4 8 12 8C15.6 8 18.6 9.6 21 13Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            View Online
-                        </button>
-
-                        <button id="captureAnotherBtn" class="tertiary-button">
-                            <svg class="button-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            Capture Another
-                        </button>
-                    </div>
-                </div>
-            </section>
         </main>
 
         <!-- Footer -->
@@ -171,15 +120,27 @@
         </footer>
     </div>
     
-    <script src="jspdf.umd.min.js"></script>
-    <script src="config.js"></script>
-    <script src="browserCompatibility.js"></script>
-    <script src="logger.js"></script>
-    <script src="api.js"></script>
-    <script src="screenshotCapture.js"></script>
-    <script src="pdfGenerator.js"></script>
-    <script src="validator.js"></script>
-    <script src="security.js"></script>
-    <script src="popup.js"></script>
+    <script>
+        // Simple test script to demonstrate interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            const vaultBtn = document.getElementById('vaultBtn');
+            const companyInput = document.getElementById('company');
+            const userInput = document.getElementById('user');
+            
+            vaultBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                alert('Test Mode: This would normally capture evidence!\n\nCompany: ' + companyInput.value + '\nUser: ' + userInput.value);
+            });
+            
+            // Demo button states
+            vaultBtn.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+            });
+            
+            vaultBtn.addEventListener('mouseleave', function() {
+                this.style.transform = '';
+            });
+        });
+    </script>
 </body>
 </html>

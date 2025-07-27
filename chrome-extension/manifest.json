@@ -1,27 +1,53 @@
 {
   "manifest_version": 3,
-  "name": "ProofVault",
-  "version": "1.0",
-  "description": "Take screenshots and create proof PDFs with company and user information",
+  "name": "ProofVault - Legal Evidence Capture",
+  "version": "1.0.0",
+  "description": "Professional legal evidence capture and authentication system. Securely capture webpage screenshots and generate authenticated PDF evidence with complete metadata tracking for legal compliance.",
   "permissions": [
     "activeTab",
     "storage",
-    "scripting"
+    "scripting",
+    "contextMenus"
   ],
   "host_permissions": [
     "http://proofvault.net:3001/*",
-    "http://proofvault:3001/*",
+    "http://proofvault:3001/*", 
     "http://localhost:3001/*",
     "https://api.proofvault.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "ProofVault"
+    "default_title": "ProofVault - Legal Evidence Capture",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
-  }
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' http://proofvault.net:3001 http://proofvault:3001 http://localhost:3001 https://api.proofvault.com https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*.png", "*.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "incognito": "spanning",
+  "minimum_chrome_version": "102",
+  "author": "ProofVault Legal Technology",
+  "homepage_url": "https://proofvault.com",
+  "short_name": "ProofVault",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuGbXWiK5dSg3SB5+QB5KWfz1cQ7jNNdcjXy7DQdKGm5bJx7YHw7hNdEsxdKcL6YtGzJdCLdOTKlXfI5VbE5Hj9zBqZzGcJYfGhCpGYrMeKfGdcHqMzJlXdKGMGm5YGBK+QB5KWfz1cQ7jNNdcjXy7DQdKGm5bJx7YHw7hNdEsxdKcL6YtGzJdCLdOTKlXfI5VbE5Hj9zBqZzGcJYfGhCpGYrMeKfGdcHqMzJlXdKGMGm5YGBK"
 }

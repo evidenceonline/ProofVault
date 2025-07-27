@@ -27,6 +27,7 @@ const uploadPDF = async (req, res, next) => {
         client.release();
         
         return res.status(409).json({
+          success: false,
           status: 'error',
           message: 'PDF file already exists',
           data: {
@@ -43,10 +44,10 @@ const uploadPDF = async (req, res, next) => {
 
       // Insert new PDF record
       const result = await client.query(
-        `INSERT INTO pdf_records (company_name, username, pdf_filename, pdf_hash, pdf_data)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, company_name, username, pdf_filename, pdf_hash, created_at`,
-        [company_name, username, file.originalname, fileHash, file.buffer]
+        `INSERT INTO pdf_records (company_name, username, pdf_filename, pdf_hash, pdf_data, file_size, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, company_name, username, pdf_filename, pdf_hash, file_size, status, created_at`,
+        [company_name, username, file.originalname, fileHash, file.buffer, file.size, 'verified']
       );
 
       client.release();
@@ -54,6 +55,7 @@ const uploadPDF = async (req, res, next) => {
       const newRecord = result.rows[0];
 
       res.status(201).json({
+        success: true,
         status: 'success',
         message: 'PDF uploaded successfully',
         data: {
@@ -62,8 +64,9 @@ const uploadPDF = async (req, res, next) => {
           username: newRecord.username,
           pdf_filename: newRecord.pdf_filename,
           pdf_hash: newRecord.pdf_hash,
-          created_at: newRecord.created_at,
-          file_size: file.size
+          file_size: newRecord.file_size,
+          status: newRecord.status,
+          created_at: newRecord.created_at
         }
       });
 
@@ -86,6 +89,9 @@ const getPDFList = async (req, res, next) => {
       limit = 10,
       company_name,
       username,
+      search,
+      date_from,
+      date_to,
       sort_by = 'created_at',
       sort_order = 'DESC'
     } = req.query;
@@ -96,7 +102,7 @@ const getPDFList = async (req, res, next) => {
     const offset = (pageNum - 1) * limitNum;
 
     // Validate sort parameters
-    const allowedSortFields = ['created_at', 'company_name', 'username', 'pdf_filename'];
+    const allowedSortFields = ['created_at', 'company_name', 'username', 'pdf_filename', 'file_size', 'status'];
     const sortField = allowedSortFields.includes(sort_by) ? sort_by : 'created_at';
     const sortDirection = sort_order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
@@ -108,8 +114,22 @@ const getPDFList = async (req, res, next) => {
       let whereParams = [];
       let paramIndex = 1;
 
+      // Global search across multiple fields
+      if (search) {
+        whereClause += `WHERE (
+          company_name ILIKE $${paramIndex} OR 
+          username ILIKE $${paramIndex} OR 
+          pdf_filename ILIKE $${paramIndex} OR 
+          id::text ILIKE $${paramIndex}
+        )`;
+        whereParams.push(`%${search}%`);
+        paramIndex++;
+      }
+
+      // Specific field filters
       if (company_name) {
-        whereClause += `WHERE company_name ILIKE $${paramIndex}`;
+        whereClause += whereClause ? ' AND ' : 'WHERE ';
+        whereClause += `company_name ILIKE $${paramIndex}`;
         whereParams.push(`%${company_name}%`);
         paramIndex++;
       }
@@ -121,6 +141,21 @@ const getPDFList = async (req, res, next) => {
         paramIndex++;
       }
 
+      // Date range filtering
+      if (date_from) {
+        whereClause += whereClause ? ' AND ' : 'WHERE ';
+        whereClause += `created_at >= $${paramIndex}`;
+        whereParams.push(date_from);
+        paramIndex++;
+      }
+
+      if (date_to) {
+        whereClause += whereClause ? ' AND ' : 'WHERE ';
+        whereClause += `created_at <= $${paramIndex}`;
+        whereParams.push(date_to);
+        paramIndex++;
+      }
+
       // Get total count
       const countQuery = `SELECT COUNT(*) FROM pdf_records ${whereClause}`;
       const countResult = await client.query(countQuery, whereParams);
@@ -129,7 +164,8 @@ const getPDFList = async (req, res, next) => {
       // Get paginated results
       const query = `
         SELECT id, company_name, username, pdf_filename, pdf_hash, 
-               LENGTH(pdf_data) as file_size, created_at, updated_at
+               COALESCE(file_size, LENGTH(pdf_data)) as file_size, 
+               status, created_at, updated_at
         FROM pdf_records 
         ${whereClause}
         ORDER BY ${sortField} ${sortDirection}
@@ -147,25 +183,27 @@ const getPDFList = async (req, res, next) => {
       const hasPrevPage = pageNum > 1;
 
       res.status(200).json({
+        success: true,
         status: 'success',
-        data: {
-          records: result.rows,
-          pagination: {
-            current_page: pageNum,
-            per_page: limitNum,
-            total_count: totalCount,
-            total_pages: totalPages,
-            has_next_page: hasNextPage,
-            has_prev_page: hasPrevPage
-          },
-          filters: {
-            company_name: company_name || null,
-            username: username || null
-          },
-          sorting: {
-            sort_by: sortField,
-            sort_order: sortDirection
-          }
+        data: result.rows,
+        pagination: {
+          current_page: pageNum,
+          per_page: limitNum,
+          total_count: totalCount,
+          total_pages: totalPages,
+          has_next_page: hasNextPage,
+          has_prev_page: hasPrevPage
+        },
+        filters: {
+          search: search || null,
+          company_name: company_name || null,
+          username: username || null,
+          date_from: date_from || null,
+          date_to: date_to || null
+        },
+        sorting: {
+          sort_by: sortField,
+          sort_order: sortDirection
         }
       });
 
@@ -218,6 +256,7 @@ const getPDFById = async (req, res, next) => {
 
       // Otherwise, return metadata only
       res.status(200).json({
+        success: true,
         status: 'success',
         data: {
           id: record.id,
@@ -225,7 +264,8 @@ const getPDFById = async (req, res, next) => {
           username: record.username,
           pdf_filename: record.pdf_filename,
           pdf_hash: record.pdf_hash,
-          file_size: record.pdf_data.length,
+          file_size: record.file_size || record.pdf_data.length,
+          status: record.status || 'verified',
           created_at: record.created_at,
           updated_at: record.updated_at,
           download_url: `/api/pdf/${id}?download=true`
@@ -279,6 +319,7 @@ const deletePDFById = async (req, res, next) => {
       client.release();
 
       res.status(200).json({
+        success: true,
         status: 'success',
         message: 'PDF deleted successfully',
         data: {
@@ -362,6 +403,7 @@ const getPDFStats = async (req, res, next) => {
       client.release();
 
       res.status(200).json({
+        success: true,
         status: 'success',
         data: {
           overview: {

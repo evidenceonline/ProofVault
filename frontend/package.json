@@ -1,0 +1,30 @@
+{
+  "name": "proofvault-frontend",
+  "version": "1.0.0",
+  "description": "ProofVault Frontend - Simple Legal Evidence Management Dashboard",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "keywords": [
+    "legal",
+    "evidence",
+    "management",
+    "pdf",
+    "dashboard"
+  ],
+  "author": "ProofVault",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "next": "^14.2.30",
+    "react": "^18",
+    "react-dom": "^18",
+    "typescript": "^5"
+  }
+}

@@ -29,6 +29,7 @@ const sendErrorDev = (err, req, res) => {
   });
 
   res.status(err.statusCode || 500).json({
+    success: false,
     status: 'error',
     error: {
       id: errorId,
@@ -65,6 +66,7 @@ const sendErrorProd = (err, req, res) => {
   // Operational, trusted error: send message to client
   if (err.isOperational) {
     res.status(err.statusCode || 500).json({
+      success: false,
       status: 'error',
       message: err.message,
       errorId: errorId,
@@ -73,6 +75,7 @@ const sendErrorProd = (err, req, res) => {
   } else {
     // Programming or other unknown error: don't leak error details
     res.status(500).json({
+      success: false,
       status: 'error',
       message: 'Something went wrong on our end. Please try again later.',
       errorId: errorId,

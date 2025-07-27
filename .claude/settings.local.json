@@ -6,7 +6,18 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(npx create-next-app:*)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm run build:*)",
+      "Bash(rm:*)",
+      "Bash(npm audit fix:*)",
+      "Bash(pkill:*)",
+      "Bash(PGPASSWORD=phoenixserg psql -h localhost -U proofvaultuser -d proofvaultdb -c \"SELECT id, company_name, LENGTH(pdf_data) as pdf_size_bytes FROM pdf_records ORDER BY created_at DESC LIMIT 3;\")",
+      "Bash(pdfinfo:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }

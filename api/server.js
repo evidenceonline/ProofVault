@@ -130,8 +130,9 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/api/health',
       pdf_upload: 'POST /api/pdf/upload',
-      pdf_list: 'GET /api/pdf/list',
+      pdf_list: 'GET /api/pdf/list?search=query&company_name=filter&username=filter&date_from=YYYY-MM-DD&date_to=YYYY-MM-DD&page=1&limit=10&sort_by=created_at&sort_order=DESC',
       pdf_get: 'GET /api/pdf/:id',
+      pdf_download: 'GET /api/pdf/:id?download=true',
       pdf_delete: 'DELETE /api/pdf/:id',
       pdf_stats: 'GET /api/pdf/stats'
     },

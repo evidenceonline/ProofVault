@@ -51,12 +51,21 @@ const initializeTables = async () => {
         pdf_filename VARCHAR(255) NOT NULL,
         pdf_hash VARCHAR(64) NOT NULL UNIQUE,
         pdf_data BYTEA NOT NULL,
+        file_size INTEGER,
+        status VARCHAR(50) DEFAULT 'verified',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
     `);
     
-    // Create index for faster queries
+    // Add new columns if they don't exist (for existing databases)
+    await client.query(`
+      ALTER TABLE pdf_records 
+      ADD COLUMN IF NOT EXISTS file_size INTEGER,
+      ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'verified'
+    `);
+    
+    // Create indexes for faster queries
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_pdf_records_created_at ON pdf_records(created_at DESC)
     `);
@@ -67,6 +76,25 @@ const initializeTables = async () => {
     
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_pdf_records_username ON pdf_records(username)
+    `);
+    
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_pdf_records_filename ON pdf_records(pdf_filename)
+    `);
+    
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_pdf_records_status ON pdf_records(status)
+    `);
+    
+    // Composite index for common search patterns
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_pdf_records_search ON pdf_records(company_name, username, created_at DESC)
+    `);
+    
+    // Full-text search index for global search
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_pdf_records_fulltext ON pdf_records 
+      USING gin(to_tsvector('english', company_name || ' ' || username || ' ' || pdf_filename))
     `);
     
     console.log('Database tables initialized successfully');
