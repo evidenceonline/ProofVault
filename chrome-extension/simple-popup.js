@@ -64,23 +64,32 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Step 1: Check API health
             showStatus('Connecting to ProofVault servers...', 20);
-            const healthResponse = await fetchWithTimeout(API_CONFIG.BASE_URL + '/health', {}, 10000);
+            const healthUrl = API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.HEALTH;
+            console.log('[PROOFVAULT] Testing API health at:', healthUrl);
+            const healthResponse = await fetchWithTimeout(healthUrl, {}, 10000);
+            console.log('[PROOFVAULT] Health response:', healthResponse.status, healthResponse.statusText);
             if (!healthResponse.ok) {
                 throw new Error('Cannot connect to ProofVault servers');
             }
             
             // Step 2: Capture screenshot
             showStatus('Capturing webpage screenshot...', 40);
+            console.log('[PROOFVAULT] Starting screenshot capture...');
             const screenshotDataUrl = await captureScreenshot();
+            console.log('[PROOFVAULT] Screenshot captured, data URL length:', screenshotDataUrl ? screenshotDataUrl.length : 'null');
             
             // Step 3: Generate PDF
             showStatus('Generating PDF evidence document...', 60);
+            console.log('[PROOFVAULT] Starting PDF generation...');
             const pdfBlob = await generatePdf(company, user, screenshotDataUrl);
+            console.log('[PROOFVAULT] PDF generated, blob size:', pdfBlob ? pdfBlob.size : 'null');
             currentPdfBlob = pdfBlob;
             
             // Step 4: Upload to server
             showStatus('Uploading to secure storage...', 80);
+            console.log('[PROOFVAULT] Starting PDF upload...');
             const uploadResult = await uploadPdf(pdfBlob, company, user);
+            console.log('[PROOFVAULT] Upload result:', uploadResult);
             currentId = uploadResult.data.id;
             
             // Step 5: Save to local storage and show success
@@ -94,7 +103,16 @@ document.addEventListener('DOMContentLoaded', function() {
             
         } catch (error) {
             console.error('[PROOFVAULT] Capture failed:', error);
+            console.error('[PROOFVAULT] Error type:', typeof error);
+            console.error('[PROOFVAULT] Error details:', {
+                message: error.message,
+                name: error.name,
+                stack: error.stack,
+                error: error.error,
+                statusText: error.statusText
+            });
             const errorMessage = getDetailedErrorMessage(error);
+            console.error('[PROOFVAULT] Processed error message:', errorMessage);
             showError(errorMessage);
         } finally {
             setButtonLoading(false);
@@ -279,7 +297,9 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('company_name', sanitizeForPdf(company));
         formData.append('username', sanitizeForPdf(user));
         
-        const response = await fetchWithRetry(API_CONFIG.BASE_URL + '/pdf/upload', {
+        const uploadUrl = API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.UPLOAD_PDF;
+        console.log('[PROOFVAULT] Uploading to:', uploadUrl);
+        const response = await fetchWithRetry(uploadUrl, {
             method: 'POST',
             body: formData
         }, 3);
@@ -488,7 +508,36 @@ document.addEventListener('DOMContentLoaded', function() {
     function getDetailedErrorMessage(error) {
         if (!error) return 'An unknown error occurred';
         
-        const message = error.message || error.toString();
+        // Handle different types of error objects
+        let message = '';
+        
+        if (typeof error === 'string') {
+            message = error;
+        } else if (error.message) {
+            message = error.message;
+        } else if (error.error) {
+            message = error.error;
+        } else if (error.statusText) {
+            message = error.statusText;
+        } else if (error.toString && typeof error.toString === 'function') {
+            message = error.toString();
+        } else {
+            // Last resort: try to extract meaningful info from object
+            try {
+                message = JSON.stringify(error);
+            } catch (e) {
+                message = 'Unknown error occurred';
+            }
+        }
+        
+        // If we still have [object Object], try to get more details
+        if (message === '[object Object]' || message.includes('[object Object]')) {
+            if (error.name) {
+                message = `${error.name}: ${error.message || 'Unknown error'}`;
+            } else {
+                message = 'Unknown error occurred - please check browser console for details';
+            }
+        }
         
         // Network errors
         if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
