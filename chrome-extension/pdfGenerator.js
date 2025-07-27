@@ -337,7 +337,7 @@ class PdfGenerator {
           this.doc.setFont(undefined, 'normal');
           this.doc.setTextColor(100);
           
-          const positionText = `Page position: X=${screenshot.position.x}px, Y=${screenshot.position.y}px`;
+          const positionText = `Page position: X=${screenshot.position?.x || 0}px, Y=${screenshot.position?.y || 0}px`;
           this.doc.text(positionText, this.options.margin, this.currentY);
           this.currentY += 8;
           
