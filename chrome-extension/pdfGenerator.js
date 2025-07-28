@@ -142,14 +142,16 @@ class PdfGenerator {
       
       const { jsPDF } = window.jspdf;
       
-      // Create PDF with error handling
+      // Create PDF with error handling and enhanced compression
       this.doc = new jsPDF({
         orientation: this.options.orientation,
         unit: this.options.unit,
         format: this.options.format,
-        compress: this.options.compress,
-        precision: this.options.precision,
-        hotfixes: ["px_scaling"]
+        compress: true, // Force compression
+        precision: 2, // Reduce precision for smaller file size
+        hotfixes: ["px_scaling"],
+        putOnlyUsedFonts: true, // Only embed used fonts
+        floatPrecision: 2 // Reduce float precision
       });
       
       // Critical validation: Ensure document was created
@@ -344,10 +346,10 @@ class PdfGenerator {
         this.currentY += 10;
       }
       
-      // Add image to PDF
+      // Add image to PDF as JPEG
       this.doc.addImage(
         imageData.dataUrl,
-        'PNG',
+        'JPEG',
         this.options.margin,
         this.currentY,
         imgWidth,
@@ -487,10 +489,10 @@ class PdfGenerator {
             throw new Error(`PDF document invalid before adding image ${i + 1}`);
           }
           
-          // Add image to PDF with error handling
+          // Add image to PDF with error handling as JPEG
           this.doc.addImage(
             imageData.dataUrl,
-            'PNG',
+            'JPEG',
             this.options.margin,
             this.currentY,
             imgDimensions.width,
@@ -602,9 +604,9 @@ class PdfGenerator {
             willReadFrequently: false
           });
           
-          // Calculate processing dimensions (reduce for PDF)
-          const maxProcessingWidth = 1200;
-          const maxProcessingHeight = 1600;
+          // Calculate processing dimensions (reduce for PDF) - smaller dimensions for better compression
+          const maxProcessingWidth = 800;  // Reduced from 1200
+          const maxProcessingHeight = 1200; // Reduced from 1600
           
           let { width: processWidth, height: processHeight } = this.calculateOptimalDimensions(
             img.width,
@@ -616,11 +618,16 @@ class PdfGenerator {
           canvas.width = processWidth;
           canvas.height = processHeight;
           
+          // Set white background for JPEG (no transparency)
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, processWidth, processHeight);
+          
           // Draw and optimize image
           ctx.drawImage(img, 0, 0, processWidth, processHeight);
           
-          // Generate optimized data URL
-          const optimizedDataUrl = canvas.toDataURL('image/png', 0.9);
+          // Generate optimized data URL as JPEG with compression
+          // Quality of 0.7 provides good balance between size and quality
+          const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
           
           // Clean up canvas immediately
           canvas.width = 1;
