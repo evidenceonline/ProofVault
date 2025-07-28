@@ -117,12 +117,16 @@ class PdfGenerator {
       
     } catch (error) {
       console.error(`PDF generation failed for ID ${generationId}:`, error);
-      throw new Error(`PDF generation failed: ${error.message}`);
-    } finally {
-      // CRITICAL: Always reset generation state
+      // Only cleanup on failure, not success
       this.isGenerating = false;
       this.generationId = null;
       this.cleanup();
+      throw new Error(`PDF generation failed: ${error.message}`);
+    } finally {
+      // CRITICAL: Always reset generation state (but don't cleanup the doc on success)
+      this.isGenerating = false;
+      this.generationId = null;
+      // Note: cleanup() is only called in catch block, not here
     }
   }
 

@@ -22,7 +22,9 @@
       "Bash(grep:*)",
       "Bash(ls:*)",
       "Bash(cp:*)",
-      "Bash(npm test)"
+      "Bash(npm test)",
+      "WebFetch(domain:docs.constellationnetwork.io)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": []
   }

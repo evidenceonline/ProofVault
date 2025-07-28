@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    allowedDevOrigins: ['proofvault.net'],
+  },
   async rewrites() {
     return [
       {

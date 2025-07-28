@@ -142,7 +142,6 @@ export default function HomePage() {
   const clearFilters = () => {
     setSearchTerm('');
     setDateFilter('');
-    setStatusFilter('all');
     setSortConfig({ key: 'created_at', direction: 'desc' });
   };
 
@@ -346,7 +345,6 @@ export default function HomePage() {
                   Filter records by specific date
                 </div>
               </div>
-              
             </div>
           </div>
         </section>
@@ -432,7 +430,7 @@ export default function HomePage() {
                       tabIndex={0}
                       onClick={() => handleSort('id')}
                       onKeyDown={(e) => e.key === 'Enter' && handleSort('id')}
-                      aria-sort={sortConfig.key === 'id' ? sortConfig.direction : 'none'}
+                      aria-sort={sortConfig.key === 'id' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
                       className="sortable"
                       style={{ cursor: 'pointer' }}
                     >
@@ -443,7 +441,7 @@ export default function HomePage() {
                       tabIndex={0}
                       onClick={() => handleSort('company_name')}
                       onKeyDown={(e) => e.key === 'Enter' && handleSort('company_name')}
-                      aria-sort={sortConfig.key === 'company_name' ? sortConfig.direction : 'none'}
+                      aria-sort={sortConfig.key === 'company_name' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
                       className="sortable"
                       style={{ cursor: 'pointer' }}
                     >
@@ -454,7 +452,7 @@ export default function HomePage() {
                       tabIndex={0}
                       onClick={() => handleSort('username')}
                       onKeyDown={(e) => e.key === 'Enter' && handleSort('username')}
-                      aria-sort={sortConfig.key === 'username' ? sortConfig.direction : 'none'}
+                      aria-sort={sortConfig.key === 'username' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
                       className="sortable"
                       style={{ cursor: 'pointer' }}
                     >
@@ -465,7 +463,7 @@ export default function HomePage() {
                       tabIndex={0}
                       onClick={() => handleSort('file_id')}
                       onKeyDown={(e) => e.key === 'Enter' && handleSort('file_id')}
-                      aria-sort={sortConfig.key === 'file_id' ? sortConfig.direction : 'none'}
+                      aria-sort={sortConfig.key === 'file_id' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
                       className="sortable"
                       style={{ cursor: 'pointer' }}
                     >
@@ -476,7 +474,7 @@ export default function HomePage() {
                       tabIndex={0}
                       onClick={() => handleSort('created_at')}
                       onKeyDown={(e) => e.key === 'Enter' && handleSort('created_at')}
-                      aria-sort={sortConfig.key === 'created_at' ? sortConfig.direction : 'none'}
+                      aria-sort={sortConfig.key === 'created_at' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
                       className="sortable"
                       style={{ cursor: 'pointer' }}
                     >

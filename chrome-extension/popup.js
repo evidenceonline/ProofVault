@@ -344,6 +344,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Set processing flag immediately to prevent concurrent executions
         isProcessing = true;
+        
+        // Immediately disable button to prevent any additional clicks
+        vaultBtn.disabled = true;
+        vaultBtn.classList.add('loading');
+        
         updateButtonState();
         
         const company = companyInput.value.trim();
