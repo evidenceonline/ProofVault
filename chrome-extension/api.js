@@ -224,8 +224,16 @@ class ApiClient {
       }
     }
     
+    // Don't include default Content-Type if it's already in custom headers or explicitly empty
+    const headers = { ...this.defaultHeaders };
+    
+    // If custom headers has an empty object, it means we want to let browser set Content-Type (for FormData)
+    if (Object.keys(customHeaders).length === 0 && customHeaders.constructor === Object) {
+      delete headers['Content-Type'];
+    }
+    
     return {
-      ...this.defaultHeaders,
+      ...headers,
       ...sanitizedHeaders
     };
   }
