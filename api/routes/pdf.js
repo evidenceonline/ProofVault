@@ -5,7 +5,8 @@ const {
   getPDFList,
   getPDFById,
   deletePDFById,
-  getPDFStats
+  getPDFStats,
+  verifyPDFOnBlockchain
 } = require('../controllers/pdfController');
 
 const router = express.Router();
@@ -33,6 +34,9 @@ router.get('/stats', getPDFStats);
 // Query parameters:
 // - download: true/false - if true, downloads the PDF file
 router.get('/:id', getPDFById);
+
+// GET /api/pdf/:id/verify - Verify PDF hash on blockchain
+router.get('/:id/verify', verifyPDFOnBlockchain);
 
 // DELETE /api/pdf/:id - Delete PDF by ID
 router.delete('/:id', deletePDFById);

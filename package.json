@@ -1,6 +1,8 @@
 {
   "dependencies": {
+    "axios": "^1.11.0",
     "canvas": "^3.1.2",
+    "form-data": "^4.0.4",
     "pdfkit": "^0.17.1"
   }
 }
