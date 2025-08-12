@@ -26,8 +26,32 @@
       "WebFetch(domain:docs.constellationnetwork.io)",
       "WebFetch(domain:github.com)",
       "Bash(./scripts/hydra:*)",
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(sbt:*)",
+      "Bash(ss:*)",
+      "Bash(pm2 logs:*)",
+      "Bash(pm2 delete:*)",
+      "Bash(pm2 stop:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(pm2 start npm:*)",
+      "Bash(timeout 5s npx -y @modelcontextprotocol/server-filesystem /home/nodeadmin/proofvault)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "mcp__filesystem__read_text_file",
+      "mcp__filesystem__directory_tree",
+      "mcp__filesystem__list_allowed_directories",
+      "mcp__filesystem__list_directory",
+      "mcp__filesystem__read_multiple_files",
+      "WebFetch(domain:localhost)",
+      "mcp__filesystem__search_files",
+      "mcp__filesystem__create_directory"
     ],
     "deny": []
-  }
+  },
+  "enabledMcpjsonServers": [
+    "playwright",
+    "postgresql",
+    "filesystem",
+    "memory",
+    "fetch"
+  ]
 }

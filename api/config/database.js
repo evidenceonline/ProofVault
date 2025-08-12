@@ -81,11 +81,30 @@ const initializeTables = async () => {
       `);
       
       const columnNames = columns.rows.map(row => row.column_name);
-      const requiredColumns = ['id', 'company_name', 'username', 'pdf_filename', 'pdf_hash', 'pdf_data', 'file_size', 'status', 'created_at', 'updated_at'];
+      const requiredColumns = ['id', 'company_name', 'username', 'pdf_filename', 'pdf_hash', 'pdf_data', 'file_size', 'status', 'created_at', 'updated_at', 'blockchain_status', 'blockchain_verified_at'];
       const missingColumns = requiredColumns.filter(col => !columnNames.includes(col));
       
       if (missingColumns.length > 0) {
         console.log('Warning: Missing columns in pdf_records table:', missingColumns.join(', '));
+        
+        // Try to add blockchain-specific columns if missing
+        if (missingColumns.includes('blockchain_status')) {
+          try {
+            await client.query('ALTER TABLE pdf_records ADD COLUMN blockchain_status VARCHAR(50) DEFAULT \'pending\';');
+            console.log('✅ Added blockchain_status column');
+          } catch (err) {
+            console.log('❌ Could not add blockchain_status column:', err.message);
+          }
+        }
+        
+        if (missingColumns.includes('blockchain_verified_at')) {
+          try {
+            await client.query('ALTER TABLE pdf_records ADD COLUMN blockchain_verified_at TIMESTAMP WITH TIME ZONE;');
+            console.log('✅ Added blockchain_verified_at column');
+          } catch (err) {
+            console.log('❌ Could not add blockchain_verified_at column:', err.message);
+          }
+        }
       } else {
         console.log('All required columns are present in pdf_records table.');
       }
