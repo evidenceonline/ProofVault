@@ -304,8 +304,8 @@ export default function HomePage() {
         <div className="container">
           <div className="header-content">
             <div className="logo">
-              <div className="logo-icon" role="img" aria-label="ProofVault Shield Icon">
-                🛡
+              <div className="logo-image-clean" role="img" aria-label="ProofVault Logo">
+                <img src="/proofvault-logo.jpg" alt="ProofVault Logo" width="80" height="80" style={{ objectFit: 'contain' }} />
               </div>
               <div className="logo-text">
                 <h1>ProofVault</h1>
