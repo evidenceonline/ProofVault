@@ -34,7 +34,7 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit
+    fileSize: 10 * 1024 * 1024, // 10MB limit
     files: 1, // Only allow 1 file per request
     fields: 10, // Limit number of fields
     fieldNameSize: 100, // Limit field name size
@@ -92,7 +92,7 @@ const validateUploadFields = (req, res, next) => {
 const handleFileSizeError = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
-      return next(new APIError('File size exceeds the maximum limit of 50MB', 413));
+      return next(new APIError('File size exceeds the maximum limit of 10MB', 413));
     }
     if (err.code === 'LIMIT_FILE_COUNT') {
       return next(new APIError('Only one file can be uploaded at a time', 400));

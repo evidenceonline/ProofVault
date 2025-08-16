@@ -117,7 +117,7 @@ const handleMulterError = (err) => {
   let statusCode = 400;
 
   if (err.code === 'LIMIT_FILE_SIZE') {
-    message = 'File size exceeds the maximum limit of 50MB';
+    message = 'File size exceeds the maximum limit of 10MB';
   } else if (err.code === 'LIMIT_FILE_COUNT') {
     message = 'Too many files uploaded';
   } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
