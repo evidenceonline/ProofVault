@@ -22,7 +22,8 @@ async function printFullPdf(tabId) {
       printBackground: true,
       preferCSSPageSize: true,
       displayHeaderFooter: false,
-      scale: 1
+      scale: 0.8,
+      transferMode: "ReturnAsStream"
     });
     return res.data;
   });
