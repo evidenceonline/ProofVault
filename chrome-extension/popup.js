@@ -92,6 +92,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if(!window.PDFLib || !PDFLib.PDFDocument){
       return fail('pdf-lib is not loaded. Add <script src=\"libs/pdf-lib.min.js\"></script> before popup.js.');
     }
+    
+    // Debug logging
+    console.log('Cover PDF B64 length:', cover.pdfB64 ? cover.pdfB64.length : 'undefined');
+    console.log('Body PDF B64 length:', body.pdfB64 ? body.pdfB64.length : 'undefined');
+    console.log('Cover PDF B64 starts with:', cover.pdfB64 ? cover.pdfB64.substring(0, 50) : 'undefined');
+    console.log('Body PDF B64 starts with:', body.pdfB64 ? body.pdfB64.substring(0, 50) : 'undefined');
+    
     const merged = await PDFLib.PDFDocument.create();
     const srcCover = await PDFLib.PDFDocument.load(b64ToBytes(cover.pdfB64));
     const srcBody  = await PDFLib.PDFDocument.load(b64ToBytes(body.pdfB64));
