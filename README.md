@@ -33,20 +33,20 @@ In our digital age, proving the authenticity and integrity of web-based evidence
 
 ### The Solution
 ProofVault provides a complete chain of custody for digital evidence through:
-- **🔐 Cryptographic fingerprinting** with SHA-256 hashing
-- **⛓️ Blockchain registration** on Constellation Network
-- **📅 Immutable timestamps** for legal compliance
-- **🔍 Public verification** interface for authenticity checks
+- **Cryptographic fingerprinting** with SHA-256 hashing
+- **Blockchain registration** on Constellation Network
+- **Immutable timestamps** for legal compliance
+- **Public verification** interface for authenticity checks
 
 ## ✨ Features
 
-### 🎯 Core Capabilities
-- **📱 Chrome Extension**: One-click PDF capture from any webpage
-- **🔒 Cryptographic Hashing**: SHA-256 fingerprinting prevents tampering
-- **⛓️ Blockchain Registration**: Immutable timestamps on Constellation Network
-- **✍️ Digital Signatures**: Non-repudiation through cryptographic proof
-- **🔍 Verification Interface**: Public registry for document authentication
-- **⚖️ Legal-Grade Evidence**: Court-admissible digital notarization
+### Core Capabilities
+- **Chrome Extension**: One-click PDF capture from any webpage
+- **Cryptographic Hashing**: SHA-256 fingerprinting prevents tampering
+- **Blockchain Registration**: Immutable timestamps on Constellation Network
+- **Digital Signatures**: Non-repudiation through cryptographic proof
+- **Verification Interface**: Public registry for document authentication
+- **Legal-Grade Evidence**: Court-admissible digital notarization
 
 ### 🛡️ Security Features
 - **Merkle Tree Structure**: Complete chain of custody verification
@@ -204,12 +204,12 @@ cd scripts/
 
 ## 📚 Documentation
 
-- **[📋 System Design](docs/DESIGN.md)** - Technical architecture overview
-- **[🔌 API Reference](docs/API.md)** - Backend endpoints documentation  
-- **[🧩 Extension Guide](docs/EXTENSION.md)** - Chrome extension usage
-- **[🚀 Deployment Guide](docs/DEPLOYMENT.md)** - Production setup instructions
-- **[🤝 Contributing Guide](docs/CONTRIBUTING.md)** - Development guidelines
-- **[📄 PDF Evidence System Design](PDF_EVIDENCE_SYSTEM_DESIGN.md)** - Complete technical specification
+- **[System Design](docs/DESIGN.md)** - Technical architecture overview
+- **[API Reference](docs/API.md)** - Backend endpoints documentation  
+- **[Extension Guide](docs/EXTENSION.md)** - Chrome extension usage
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production setup instructions
+- **[Contributing Guide](docs/CONTRIBUTING.md)** - Development guidelines
+- **[PDF Evidence System Design](PDF_EVIDENCE_SYSTEM_DESIGN.md)** - Complete technical specification
 
 ## 🔒 Security Model
 
@@ -224,33 +224,6 @@ cd scripts/
 - **Cryptographic Hashes**: Provide forensic-level integrity proof  
 - **Digital Signatures**: Non-repudiation through mathematical proof
 - **Decentralized Verification**: No reliance on single trusted party
-
-## 🛠️ Implementation Phases
-
-### Phase 1: Metagraph Enhancement ✅
-- Custom PDF record data structures
-- Transaction types for PDF registration
-- Validation logic and state management
-
-### Phase 2: Chrome Extension 🚧
-- Manifest V3 framework
-- Screen capture and PDF generation
-- SHA-256 hashing and digital signing
-
-### Phase 3: Backend API 📋
-- Node.js/Express server
-- Metagraph integration
-- PostgreSQL database setup
-
-### Phase 4: Frontend Registry 📋
-- React-based verification interface
-- PDF browser and search functionality
-- Public verification tools
-
-### Phase 5: Integration & Testing 📋
-- End-to-end testing
-- Security audit
-- Production deployment
 
 ## 🤝 Contributing
 
@@ -276,17 +249,6 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 - Powered by [Tessellation Framework](https://github.com/Constellation-Labs/tessellation)
 - Uses [Euclid Development Environment](https://github.com/Constellation-Labs/euclid-development-environment)
 - Inspired by the critical need for trustworthy digital evidence in our digital world
-
-## 📞 Support
-
-For questions, issues, or support:
-- 🐛 [Report a Bug](https://github.com/evidenceonline/ProofVault/issues/new?template=bug_report.md)
-- 💡 [Request a Feature](https://github.com/evidenceonline/ProofVault/issues/new?template=feature_request.md)  
-- 💬 [Start a Discussion](https://github.com/evidenceonline/ProofVault/discussions)
-
----
-
-<div align="center">
 
 **[⭐ Star this repo](https://github.com/evidenceonline/ProofVault)** if you find ProofVault useful!
 
