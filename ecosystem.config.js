@@ -19,6 +19,16 @@ module.exports = {
         PORT: 3002,
         NODE_ENV: 'production'
       }
+    },
+    {
+      name: 'proofvault-business-site',
+      cwd: './business-site',
+      script: 'npm',
+      args: 'start',
+      env: {
+        PORT: 3005,
+        NODE_ENV: 'production'
+      }
     }
   ]
 };

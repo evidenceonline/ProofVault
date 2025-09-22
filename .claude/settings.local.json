@@ -43,7 +43,8 @@
       "mcp__filesystem__read_multiple_files",
       "WebFetch(domain:localhost)",
       "mcp__filesystem__search_files",
-      "mcp__filesystem__create_directory"
+      "mcp__filesystem__create_directory",
+      "Read(//home/nodeadmin/**)"
     ],
     "deny": []
   },

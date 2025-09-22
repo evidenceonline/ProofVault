@@ -582,17 +582,31 @@ const submitToBlockchain = async (recordId, pdfHash, filename, companyName) => {
             console.log(`🎉 TRUE CONSENSUS VERIFIED for ${recordId}`);
             
             try {
+              // CRITICAL: Add extensive logging before database update
+              console.log(`🔄 UPDATING DATABASE for record ${recordId}:`);
+              console.log(`   - blockchain_tx_id: ${blockchainTxHash}`);
+              console.log(`   - blockchain_status: verified`);
+              console.log(`   - snapshot_ordinal: ${consensusResult.snapshotOrdinal} (REAL blockchain ordinal)`);
+              console.log(`   - evidence_timestamp: ${consensusResult.evidenceTimestamp || 'not set'} (separate timestamp)`);
+              
+              // Validate before database update
+              if (consensusResult.snapshotOrdinal > 1000000000) {
+                throw new Error(`CRITICAL: Trying to store timestamp ${consensusResult.snapshotOrdinal} as ordinal! This is the bug we're fixing.`);
+              }
+              
               await client.query(
                 `UPDATE pdf_records SET 
                  blockchain_tx_id = $1, 
                  blockchain_status = $2, 
                  blockchain_verified_at = NOW(),
                  snapshot_ordinal = $3,
-                 consensus_verified_at = NOW()
+                 consensus_verified_at = NOW(),
+                 evidence_timestamp = $5
                  WHERE id = $4`,
-                [blockchainTxHash, 'verified', consensusResult.snapshotOrdinal, recordId]
+                [blockchainTxHash, 'verified', consensusResult.snapshotOrdinal, recordId, consensusResult.evidenceTimestamp]
               );
-              console.log(`✅ CONSENSUS VERIFIED: Record ${recordId} in snapshot ${consensusResult.snapshotOrdinal}`);
+              console.log(`✅ CONSENSUS VERIFIED: Record ${recordId} in REAL blockchain snapshot ${consensusResult.snapshotOrdinal}`);
+              console.log(`📅 Evidence timestamp stored separately: ${consensusResult.evidenceTimestamp}`);
             } catch (columnError) {
               // Fallback if new columns don't exist yet
               await client.query(
@@ -731,19 +745,43 @@ const checkSnapshotConsensus = async (recordId, expectedHash) => {
     if (globalSnapshotResponse.ok) {
       const snapshotData = await globalSnapshotResponse.json();
       const realOrdinal = snapshotData.value?.ordinal || 0;
-      console.log(`📸 Real L0 snapshot ordinal: ${realOrdinal}`);
+      const currentTimestamp = Date.now();
+      
+      // CRITICAL: Add validation to ensure we're getting a real ordinal, not a timestamp
+      if (realOrdinal > 0 && realOrdinal < 1000000000) { // Reasonable ordinal range (not timestamp)
+        console.log(`📸 VALIDATED Real L0 snapshot ordinal: ${realOrdinal} (type: ${typeof realOrdinal})`);
+        console.log(`🕒 Current timestamp for comparison: ${currentTimestamp} (type: ${typeof currentTimestamp})`);
+        console.log(`✅ Ordinal validation passed: ${realOrdinal} is a valid blockchain ordinal`);
+      } else {
+        console.error(`❌ ORDINAL VALIDATION FAILED: ${realOrdinal} looks like a timestamp, not an ordinal!`);
+        throw new Error(`Invalid ordinal received: ${realOrdinal} - this appears to be a timestamp, not a blockchain ordinal`);
+      }
       
       // Method 2: Check L1 data existence (our evidence should be there)
       const l1Check = await checkBasicSubmission(recordId, expectedHash, 3);
       if (l1Check) {
         console.log(`✅ Evidence ${recordId} found in L1 data layer`);
-        return {
+        
+        // CRITICAL: Create result object with explicit validation
+        const consensusResult = {
           verified: true,
-          snapshotOrdinal: realOrdinal, // Use REAL L0 blockchain ordinal
-          realBlockchainOrdinal: realOrdinal,
-          timestamp: Date.now(), // Also keep timestamp for legal records
+          snapshotOrdinal: realOrdinal, // REAL L0 blockchain ordinal (validated above)
+          realBlockchainOrdinal: realOrdinal, // Backup field with same value
+          evidenceTimestamp: currentTimestamp, // Separate timestamp field for legal records
           method: 'real_l0_ordinal_with_l1_verification'
         };
+        
+        // FINAL VALIDATION: Ensure we're not accidentally storing timestamp as ordinal
+        console.log(`🔍 FINAL VALIDATION before return:`);
+        console.log(`   - snapshotOrdinal: ${consensusResult.snapshotOrdinal} (should be ~${realOrdinal})`);
+        console.log(`   - evidenceTimestamp: ${consensusResult.evidenceTimestamp} (should be ~${currentTimestamp})`);
+        console.log(`   - Ordinal != Timestamp: ${consensusResult.snapshotOrdinal !== consensusResult.evidenceTimestamp}`);
+        
+        if (consensusResult.snapshotOrdinal === consensusResult.evidenceTimestamp) {
+          throw new Error(`CRITICAL BUG: snapshotOrdinal equals timestamp! This would store timestamp as ordinal.`);
+        }
+        
+        return consensusResult;
       }
       
       // Method 3: Try L0 consensus endpoint (may not work but try)
@@ -753,13 +791,26 @@ const checkSnapshotConsensus = async (recordId, expectedHash) => {
           const consensusData = await consensusCheck.json();
           if (consensusData.consensusStatus === 'consensus_verified') {
             console.log(`✅ Evidence ${recordId} confirmed via L0 consensus endpoint`);
-            return {
+            
+            const currentTimestamp = Date.now();
+            const consensusResult = {
               verified: true,
               snapshotOrdinal: realOrdinal, // Use real ordinal, not endpoint's timestamp
               realBlockchainOrdinal: realOrdinal,
-              timestamp: Date.now(),
+              evidenceTimestamp: currentTimestamp,
               method: 'l0_consensus_with_real_ordinal'
             };
+            
+            // VALIDATION: Ensure ordinal != timestamp for this path too
+            console.log(`🔍 L0 CONSENSUS VALIDATION:`);
+            console.log(`   - snapshotOrdinal: ${consensusResult.snapshotOrdinal}`);
+            console.log(`   - evidenceTimestamp: ${consensusResult.evidenceTimestamp}`);
+            
+            if (consensusResult.snapshotOrdinal === consensusResult.evidenceTimestamp) {
+              throw new Error(`CRITICAL BUG in L0 consensus path: snapshotOrdinal equals timestamp!`);
+            }
+            
+            return consensusResult;
           }
         }
       } catch (consensusError) {
