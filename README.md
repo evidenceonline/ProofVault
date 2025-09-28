@@ -94,8 +94,8 @@ ProofVault provides a complete chain of custody for digital evidence through:
 4. **Set up PostgreSQL database**
    ```bash
    # Create database and run setup script
-   psql -U postgres -c "CREATE DATABASE proofvault;"
-   psql -U postgres -d proofvault -f setup_proofvaultdb_test.sql
+   psql -U postgres -c "CREATE DATABASE proofvaultdb_test;"
+   psql -U postgres -d proofvaultdb_test -f setup_proofvaultdb_test.sql
    ```
 
 5. **Start the application**
@@ -130,12 +130,16 @@ graph TB
 ### Component Structure
 ```
 ProofVault/
-├── chrome-extension/    # Browser extension for PDF capture
 ├── api/                # Node.js API server with Digital Evidence integration
+├── chrome-extension/   # Browser extension for PDF capture
 ├── frontend/           # Next.js dashboard interface
-├── proofvault-client/  # Blockchain client utilities
-├── DOCUMENTATION.md    # Complete technical documentation
-└── setup_proofvaultdb_test.sql  # Database setup
+├── proofvault-client/  # Blockchain client utilities (deprecated)
+├── business-site/      # Marketing website
+├── web/               # Additional web components
+├── DOCUMENTATION.md   # Complete technical documentation
+├── setup_proofvaultdb_test.sql  # Database setup script
+├── ecosystem.config.js # PM2 process management
+└── package.json       # Root dependencies
 ```
 
 ### Integration Layers
@@ -214,14 +218,14 @@ cd frontend && npm install
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](docs/CONTRIBUTING.md) for details.
+We welcome contributions!
 
 ### Development Workflow
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes following our coding standards
 4. Add tests if applicable
-5. Run linting: `npm run lint`
+5. Run linting: `npm run lint` (if available)
 6. Commit with conventional commits (`git commit -m 'feat: add amazing feature'`)
 7. Push to your fork (`git push origin feature/amazing-feature`)
 8. Open a Pull Request
