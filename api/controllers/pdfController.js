@@ -1,7 +1,7 @@
 const { pool } = require('../config/database');
 const { APIError } = require('../middleware/errorHandler');
 const { v4: uuidv4 } = require('uuid');
-const dag4Signer = require('../utils/dag4-signer');
+const digitalEvidenceClient = require('../utils/digital-evidence-client');
 
 // Upload PDF file
 const uploadPDF = async (req, res, next) => {
@@ -67,14 +67,14 @@ const uploadPDF = async (req, res, next) => {
       // Submit hash to blockchain and wait for confirmation
       try {
         console.log('Submitting PDF hash to blockchain for confirmation...');
-        const blockchainConfirmed = await submitToBlockchain(
-          newRecord.id, 
-          fileHash, 
-          file.originalname, 
+        const blockchainResult = await submitToBlockchain(
+          newRecord.id,
+          fileHash,
+          file.originalname,
           company_name
         );
 
-        if (blockchainConfirmed) {
+        if (blockchainResult.success) {
           res.status(201).json({
             success: true,
             status: 'success',
@@ -88,6 +88,7 @@ const uploadPDF = async (req, res, next) => {
               file_size: file.size,
               status: 'blockchain_verified', // Confirmed on blockchain
               blockchain_status: 'confirmed',
+              blockchain_tx_id: blockchainResult.fingerprintHash,
               created_at: newRecord.created_at,
               file_id: newRecord.file_id
             }
@@ -218,12 +219,9 @@ const getPDFList = async (req, res, next) => {
                'verified' as status, 
                created_at,
                created_at as updated_at,
-               file_id,
                blockchain_status,
                blockchain_verified_at,
-               blockchain_tx_id,
-               snapshot_ordinal,
-               consensus_verified_at
+               blockchain_tx_id
         FROM pdf_records 
         ${whereClause}
         ORDER BY ${sortField} ${sortDirection}
@@ -313,30 +311,29 @@ const getPDFById = async (req, res, next) => {
       }
 
       // Otherwise, return metadata only
-      // Get blockchain status dynamically if not stored in database
-      let blockchainStatus = 'unknown';
+      // Get Digital Evidence status dynamically if fingerprint hash exists
+      let blockchainStatus = record.blockchain_status || 'unknown';
       let blockchainVerified = false;
-      
-      if (record.blockchain_tx_id) {
+
+      if (record.blockchain_tx_id && record.blockchain_status === 'submitted') {
         try {
-          // Check blockchain verification status by querying the metagraph
-          const verifyResponse = await fetch(`http://localhost:9400/data-application/text/${record.id}`);
-          if (verifyResponse.ok) {
-            const blockchainData = await verifyResponse.json();
-            if (blockchainData.hash === record.pdf_hash) {
-              blockchainStatus = 'verified';
-              blockchainVerified = true;
-            } else {
-              blockchainStatus = 'hash_mismatch';
-            }
-          } else if (verifyResponse.status === 404) {
+          // Check Digital Evidence API status
+          const statusResult = await digitalEvidenceClient.checkFingerprintStatus(record.blockchain_tx_id);
+          if (statusResult.status === 'FINALIZED_COMMITMENT') {
+            blockchainStatus = 'verified';
+            blockchainVerified = true;
+          } else if (statusResult.status === 'PENDING') {
             blockchainStatus = 'pending';
+            blockchainVerified = false;
+          } else {
+            blockchainStatus = 'error';
+            blockchainVerified = false;
           }
         } catch (error) {
-          console.warn('Could not verify blockchain status:', error.message);
-          blockchainStatus = 'unknown';
+          console.warn('Could not verify Digital Evidence status:', error.message);
+          blockchainStatus = record.blockchain_status || 'unknown';
         }
-      } else {
+      } else if (!record.blockchain_tx_id) {
         blockchainStatus = 'not_submitted';
       }
 
@@ -524,320 +521,68 @@ const getPDFStats = async (req, res, next) => {
   }
 };
 
-// Submit hash to blockchain metagraph using DAG4 signed TextUpdate format
+// Submit hash to Constellation Digital Evidence API for tamper-proof verification
 const submitToBlockchain = async (recordId, pdfHash, filename, companyName) => {
   try {
-    // Ensure DAG4 signer is properly initialized (like our working tests)
-    await dag4Signer.ensureInitialized();
-    
-    // Create the data to be signed (same structure as working tests)
-    const data = {
-      id: recordId,
-      hash: pdfHash,
-      filename: filename,
-      company: companyName,
-      timestamp: Date.now()
-    };
+    console.log(`📄 Submitting PDF evidence to Digital Evidence API for record: ${recordId}`);
 
-    // Sign the data with DAG4 (same pattern as working tests)
-    const signedTransaction = await dag4Signer.createMetagraphTransaction(data);
-    
-    console.log(`Submitting signed transaction for ${recordId} from address: ${dag4Signer.getAddress()}`);
-    
-    // Submit to metagraph using the correct endpoint
-    console.log(`Submitting to blockchain for record ${recordId}`);
-    
-    // For now, use simple TextUpdate format (id + hash only)
-    const textUpdate = {
-      id: recordId,
-      hash: pdfHash
-    };
-    
-    const endpoint = 'http://localhost:9400/data-application/text';
-    
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(textUpdate)
-      });
-      
-      console.log(`Using endpoint: ${endpoint} - Status: ${response.status}`);
-
-      if (response.ok) {
-        const responseData = await response.json();
-        const blockchainTxHash = responseData.hash;
-        
-        console.log(`Hash submitted to blockchain for record ${recordId} - Status: ${response.status}`);
-        console.log(`Blockchain transaction hash: ${blockchainTxHash}`);
-        
-        // Now verify the blockchain actually processed it with consensus verification
-        console.log('🔄 Starting true blockchain consensus verification...');
-        const consensusResult = await waitForBlockchainConfirmation(recordId, pdfHash);
-        
-        const client = await pool.connect();
-        try {
-          if (consensusResult.verified && consensusResult.stage === 'consensus') {
-            // TRUE BLOCKCHAIN CONSENSUS VERIFIED!
-            console.log(`🎉 TRUE CONSENSUS VERIFIED for ${recordId}`);
-            
-            try {
-              // CRITICAL: Add extensive logging before database update
-              console.log(`🔄 UPDATING DATABASE for record ${recordId}:`);
-              console.log(`   - blockchain_tx_id: ${blockchainTxHash}`);
-              console.log(`   - blockchain_status: verified`);
-              console.log(`   - snapshot_ordinal: ${consensusResult.snapshotOrdinal} (REAL blockchain ordinal)`);
-              console.log(`   - evidence_timestamp: ${consensusResult.evidenceTimestamp || 'not set'} (separate timestamp)`);
-              
-              // Validate before database update
-              if (consensusResult.snapshotOrdinal > 1000000000) {
-                throw new Error(`CRITICAL: Trying to store timestamp ${consensusResult.snapshotOrdinal} as ordinal! This is the bug we're fixing.`);
-              }
-              
-              await client.query(
-                `UPDATE pdf_records SET 
-                 blockchain_tx_id = $1, 
-                 blockchain_status = $2, 
-                 blockchain_verified_at = NOW(),
-                 snapshot_ordinal = $3,
-                 consensus_verified_at = NOW(),
-                 evidence_timestamp = $5
-                 WHERE id = $4`,
-                [blockchainTxHash, 'verified', consensusResult.snapshotOrdinal, recordId, consensusResult.evidenceTimestamp]
-              );
-              console.log(`✅ CONSENSUS VERIFIED: Record ${recordId} in REAL blockchain snapshot ${consensusResult.snapshotOrdinal}`);
-              console.log(`📅 Evidence timestamp stored separately: ${consensusResult.evidenceTimestamp}`);
-            } catch (columnError) {
-              // Fallback if new columns don't exist yet
-              await client.query(
-                'UPDATE pdf_records SET blockchain_tx_id = $1, blockchain_status = $2, blockchain_verified_at = NOW() WHERE id = $3',
-                [blockchainTxHash, 'verified', recordId]
-              );
-              console.log(`✅ Blockchain verified (legacy schema): ${recordId}`);
-            }
-            return true;
-            
-          } else if (consensusResult.stage === 'pending_consensus') {
-            // Submitted to OnChain but not yet in consensus snapshot
-            console.log(`⏳ Record ${recordId} submitted but waiting for consensus`);
-            
-            try {
-              await client.query(
-                'UPDATE pdf_records SET blockchain_tx_id = $1, blockchain_status = $2 WHERE id = $3',
-                [blockchainTxHash, 'submitted', recordId]
-              );
-              console.log(`📝 Status: submitted (waiting for consensus)`);
-            } catch (columnError) {
-              await client.query(
-                'UPDATE pdf_records SET blockchain_tx_id = $1 WHERE id = $2',
-                [blockchainTxHash, recordId]
-              );
-            }
-            return true; // Still successful submission, just not consensus-verified yet
-            
-          } else {
-            // Submission failed
-            console.log(`❌ Blockchain submission failed for ${recordId}`);
-            try {
-              await client.query(
-                'UPDATE pdf_records SET blockchain_status = $1 WHERE id = $2',
-                ['failed', recordId]
-              );
-            } catch (columnError) {
-              // Ignore if column doesn't exist
-            }
-            return false;
-          }
-        } catch (dbError) {
-          console.error('Failed to update blockchain status:', dbError);
-          return false;
-        } finally {
-          client.release();
-        }
-      } else {
-        const errorText = await response.text();
-        console.error('Blockchain submission failed:', response.status, errorText);
-        throw new Error(`Blockchain submission failed: ${response.status}`);
+    const result = await digitalEvidenceClient.submitFingerprint({
+      documentRef: pdfHash,
+      eventId: recordId,
+      documentId: filename,
+      metadata: {
+        company: companyName,
+        filename: filename
       }
-    } catch (error) {
-      console.error('Error submitting to blockchain:', error);
-      throw error;
+    });
+
+    // Update database with Digital Evidence fingerprint information
+    const client = await pool.connect();
+    try {
+      await client.query(
+        `UPDATE pdf_records SET
+         blockchain_tx_id = $1,
+         blockchain_status = $2,
+         blockchain_verified_at = NOW()
+         WHERE id = $3`,
+        [result.fingerprintHash, 'submitted', recordId]
+      );
+
+      console.log(`✅ Digital Evidence submission successful for record ${recordId}`);
+      console.log(`🔍 Explorer URL: ${result.explorerUrl}`);
+      console.log(`🆔 Fingerprint Hash: ${result.fingerprintHash}`);
+
+      return { success: true, fingerprintHash: result.fingerprintHash };
+
+    } catch (dbError) {
+      console.error('Failed to update database with Digital Evidence info:', dbError);
+      return { success: false };
+    } finally {
+      client.release();
     }
+
   } catch (error) {
-    console.error('Error in submitToBlockchain:', error);
+    console.error('❌ Digital Evidence submission failed:', error);
+
+    // Mark as failed in database
+    const client = await pool.connect();
+    try {
+      await client.query(
+        'UPDATE pdf_records SET blockchain_status = $1 WHERE id = $2',
+        ['failed', recordId]
+      );
+    } catch (dbError) {
+      console.error('Failed to update failure status:', dbError);
+    } finally {
+      client.release();
+    }
+
     throw error;
   }
 };
 
-// Wait for true blockchain consensus verification (snapshot inclusion)
-const waitForBlockchainConfirmation = async (recordId, expectedHash, maxAttempts = 30) => {
-  console.log(`🔍 Starting true blockchain consensus verification for record ${recordId}...`);
-  
-  // Phase 1: Check basic submission first
-  const basicSubmitted = await checkBasicSubmission(recordId, expectedHash, 10);
-  if (!basicSubmitted) {
-    console.error(`❌ Record ${recordId} not found in basic storage`);
-    return { verified: false, stage: 'submission' };
-  }
-  
-  console.log(`✅ Phase 1: Record ${recordId} found in OnChain state`);
-  
-  // Phase 2: Wait for snapshot consensus inclusion
-  console.log(`🔄 Phase 2: Waiting for snapshot consensus inclusion...`);
-  
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      const consensusResult = await checkSnapshotConsensus(recordId, expectedHash);
-      
-      if (consensusResult.verified) {
-        console.log(`✅ CONSENSUS VERIFIED! Record ${recordId} included in snapshot ${consensusResult.snapshotOrdinal} after ${attempt} attempts`);
-        return {
-          verified: true,
-          stage: 'consensus',
-          snapshotOrdinal: consensusResult.snapshotOrdinal,
-          consensusTimestamp: new Date().toISOString()
-        };
-      }
-      
-      if (attempt < maxAttempts) {
-        console.log(`🕒 Attempt ${attempt}/${maxAttempts}: Waiting for consensus inclusion...`);
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds for consensus
-      }
-    } catch (error) {
-      console.error(`⚠️ Error checking consensus (attempt ${attempt}):`, error.message);
-      if (attempt < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-    }
-  }
-  
-  console.log(`⚠️ Consensus timeout after ${maxAttempts} attempts - marking as submitted but not consensus-verified`);
-  return { verified: false, stage: 'pending_consensus' };
-};
 
-// Check basic submission to OnChain state
-const checkBasicSubmission = async (recordId, expectedHash, maxAttempts = 10) => {
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      const response = await fetch(`http://localhost:9400/data-application/text/${recordId}`);
-      if (response.ok) {
-        const data = await response.json();
-        return data.hash === expectedHash;
-      }
-      if (attempt < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    } catch (error) {
-      if (attempt < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
-  }
-  return false;
-};
-
-// Check if data exists in finalized consensus snapshot
-const checkSnapshotConsensus = async (recordId, expectedHash) => {
-  try {
-    // Method 1: Get REAL snapshot ordinal from L0 global snapshots
-    const globalSnapshotResponse = await fetch(`http://localhost:9000/global-snapshots/latest`);
-    
-    if (globalSnapshotResponse.ok) {
-      const snapshotData = await globalSnapshotResponse.json();
-      const realOrdinal = snapshotData.value?.ordinal || 0;
-      const currentTimestamp = Date.now();
-      
-      // CRITICAL: Add validation to ensure we're getting a real ordinal, not a timestamp
-      if (realOrdinal > 0 && realOrdinal < 1000000000) { // Reasonable ordinal range (not timestamp)
-        console.log(`📸 VALIDATED Real L0 snapshot ordinal: ${realOrdinal} (type: ${typeof realOrdinal})`);
-        console.log(`🕒 Current timestamp for comparison: ${currentTimestamp} (type: ${typeof currentTimestamp})`);
-        console.log(`✅ Ordinal validation passed: ${realOrdinal} is a valid blockchain ordinal`);
-      } else {
-        console.error(`❌ ORDINAL VALIDATION FAILED: ${realOrdinal} looks like a timestamp, not an ordinal!`);
-        throw new Error(`Invalid ordinal received: ${realOrdinal} - this appears to be a timestamp, not a blockchain ordinal`);
-      }
-      
-      // Method 2: Check L1 data existence (our evidence should be there)
-      const l1Check = await checkBasicSubmission(recordId, expectedHash, 3);
-      if (l1Check) {
-        console.log(`✅ Evidence ${recordId} found in L1 data layer`);
-        
-        // CRITICAL: Create result object with explicit validation
-        const consensusResult = {
-          verified: true,
-          snapshotOrdinal: realOrdinal, // REAL L0 blockchain ordinal (validated above)
-          realBlockchainOrdinal: realOrdinal, // Backup field with same value
-          evidenceTimestamp: currentTimestamp, // Separate timestamp field for legal records
-          method: 'real_l0_ordinal_with_l1_verification'
-        };
-        
-        // FINAL VALIDATION: Ensure we're not accidentally storing timestamp as ordinal
-        console.log(`🔍 FINAL VALIDATION before return:`);
-        console.log(`   - snapshotOrdinal: ${consensusResult.snapshotOrdinal} (should be ~${realOrdinal})`);
-        console.log(`   - evidenceTimestamp: ${consensusResult.evidenceTimestamp} (should be ~${currentTimestamp})`);
-        console.log(`   - Ordinal != Timestamp: ${consensusResult.snapshotOrdinal !== consensusResult.evidenceTimestamp}`);
-        
-        if (consensusResult.snapshotOrdinal === consensusResult.evidenceTimestamp) {
-          throw new Error(`CRITICAL BUG: snapshotOrdinal equals timestamp! This would store timestamp as ordinal.`);
-        }
-        
-        return consensusResult;
-      }
-      
-      // Method 3: Try L0 consensus endpoint (may not work but try)
-      try {
-        const consensusCheck = await fetch(`http://localhost:9000/consensus/evidence/${recordId}`);
-        if (consensusCheck.ok) {
-          const consensusData = await consensusCheck.json();
-          if (consensusData.consensusStatus === 'consensus_verified') {
-            console.log(`✅ Evidence ${recordId} confirmed via L0 consensus endpoint`);
-            
-            const currentTimestamp = Date.now();
-            const consensusResult = {
-              verified: true,
-              snapshotOrdinal: realOrdinal, // Use real ordinal, not endpoint's timestamp
-              realBlockchainOrdinal: realOrdinal,
-              evidenceTimestamp: currentTimestamp,
-              method: 'l0_consensus_with_real_ordinal'
-            };
-            
-            // VALIDATION: Ensure ordinal != timestamp for this path too
-            console.log(`🔍 L0 CONSENSUS VALIDATION:`);
-            console.log(`   - snapshotOrdinal: ${consensusResult.snapshotOrdinal}`);
-            console.log(`   - evidenceTimestamp: ${consensusResult.evidenceTimestamp}`);
-            
-            if (consensusResult.snapshotOrdinal === consensusResult.evidenceTimestamp) {
-              throw new Error(`CRITICAL BUG in L0 consensus path: snapshotOrdinal equals timestamp!`);
-            }
-            
-            return consensusResult;
-          }
-        }
-      } catch (consensusError) {
-        console.log(`⚠️ L0 consensus endpoint unavailable: ${consensusError.message}`);
-      }
-    }
-  } catch (error) {
-    console.log(`⚠️ L0 snapshot endpoint error:`, error.message);
-  }
-  
-  // Fallback: Basic existence check with timestamp (last resort)
-  const extendedCheck = await checkBasicSubmission(recordId, expectedHash, 3);
-  if (extendedCheck) {
-    console.log(`⚠️ Using fallback method - evidence exists but using timestamp`);
-    return {
-      verified: true,
-      snapshotOrdinal: Date.now(), // Fallback timestamp
-      realBlockchainOrdinal: null,
-      timestamp: Date.now(),
-      method: 'fallback_timestamp_only'
-    };
-  }
-  
-  return { verified: false };
-};
-
-// Verify PDF hash on blockchain
+// Verify PDF hash using Digital Evidence API
 const verifyPDFOnBlockchain = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -851,11 +596,10 @@ const verifyPDFOnBlockchain = async (req, res, next) => {
     const client = await pool.connect();
 
     try {
-      // Get PDF hash and consensus data from database
+      // Get PDF record from database
       const result = await client.query(
         `SELECT id, pdf_hash, pdf_filename, company_name, blockchain_tx_id,
-                blockchain_status, snapshot_ordinal, consensus_verified_at,
-                created_at
+                blockchain_status, blockchain_verified_at, created_at
          FROM pdf_records WHERE id = $1`,
         [id]
       );
@@ -868,92 +612,58 @@ const verifyPDFOnBlockchain = async (req, res, next) => {
       const record = result.rows[0];
       client.release();
 
-      // Check consensus verification status with proper state management
-      let blockchainVerified = record.blockchain_status === 'verified';
-      let consensusData = null;
-      let verificationMessage = 'Checking consensus status';
-      
-      // Check if we have snapshot ordinal (true consensus)
-      if (record.snapshot_ordinal) {
-        blockchainVerified = true;
-        
-        // Get current real L0 ordinal for comparison
-        let realL0Ordinal = null;
-        let ordinalType = 'timestamp-based';
-        
+      let verificationData = {
+        id: record.id,
+        pdf_hash: record.pdf_hash,
+        filename: record.pdf_filename,
+        company_name: record.company_name,
+        blockchain_status: record.blockchain_status,
+        blockchain_verified_at: record.blockchain_verified_at,
+        created_at: record.created_at,
+        fingerprint_hash: record.blockchain_tx_id,
+        verification_status: 'pending',
+        verification_message: 'Evidence pending Digital Evidence submission',
+        explorer_url: null
+      };
+
+      // Check Digital Evidence API status if we have a fingerprint hash
+      if (record.blockchain_tx_id && record.blockchain_status === 'submitted') {
         try {
-          const globalSnapshotResponse = await fetch(`http://localhost:9000/global-snapshots/latest`);
-          if (globalSnapshotResponse.ok) {
-            const snapshotData = await globalSnapshotResponse.json();
-            realL0Ordinal = snapshotData.value?.ordinal || null;
-            
-            // Check if our stored ordinal is a real blockchain ordinal or timestamp
-            const storedOrdinal = parseInt(record.snapshot_ordinal);
-            if (storedOrdinal < 1000000 && storedOrdinal > 0) {
-              ordinalType = 'real-blockchain-ordinal';
-            } else if (storedOrdinal > 1000000000000) {
-              ordinalType = 'timestamp-based';
-            }
+          const statusResult = await digitalEvidenceClient.checkFingerprintStatus(record.blockchain_tx_id);
+
+          if (statusResult.status === 'FINALIZED_COMMITMENT') {
+            verificationData.verification_status = 'verified';
+            verificationData.verification_message = 'Evidence verified on Constellation Digital Evidence API';
+            verificationData.blockchain_verified = true;
+          } else if (statusResult.status === 'PENDING') {
+            verificationData.verification_status = 'pending';
+            verificationData.verification_message = 'Evidence submitted, awaiting consensus finalization';
+            verificationData.blockchain_verified = false;
+          } else {
+            verificationData.verification_status = 'error';
+            verificationData.verification_message = statusResult.error || 'Unknown status';
+            verificationData.blockchain_verified = false;
           }
-        } catch (fetchError) {
-          console.log('Could not fetch current L0 ordinal:', fetchError.message);
+
+          verificationData.explorer_url = statusResult.explorerUrl;
+          verificationData.digital_evidence_status = statusResult.status;
+
+        } catch (statusError) {
+          console.error('Error checking Digital Evidence status:', statusError);
+          verificationData.verification_status = 'error';
+          verificationData.verification_message = 'Could not verify Digital Evidence status';
+          verificationData.blockchain_verified = false;
         }
-        
-        consensusData = {
-          snapshotOrdinal: record.snapshot_ordinal,
-          consensusVerifiedAt: record.consensus_verified_at,
-          stateManagement: 'EvidenceOnChainState + EvidenceCalculatedState',
-          consensusType: ordinalType === 'real-blockchain-ordinal' ? 
-            'True blockchain consensus with real ordinals' : 
-            'Blockchain verified with timestamp ordinals',
-          ordinalType: ordinalType,
-          currentL0Ordinal: realL0Ordinal,
-          evidenceTimestamp: record.created_at
-        };
-        
-        if (ordinalType === 'real-blockchain-ordinal') {
-          verificationMessage = `Evidence verified at blockchain consensus ordinal ${record.snapshot_ordinal}`;
-        } else {
-          verificationMessage = `Evidence verified with timestamp ordinal ${record.snapshot_ordinal}`;
-        }
-      } else if (record.blockchain_status === 'confirmed' || record.blockchain_status === 'submitted') {
-        verificationMessage = 'Evidence submitted, awaiting consensus inclusion';
-        
-        // Try to query L0 for consensus status
-        try {
-          const consensusResponse = await fetch(`http://localhost:9000/consensus/evidence/${record.id}`);
-          if (consensusResponse.ok) {
-            const consensusInfo = await consensusResponse.json();
-            consensusData = consensusInfo;
-            verificationMessage = consensusInfo.message || 'Consensus check in progress';
-          }
-        } catch (error) {
-          console.log('L0 consensus check:', error.message);
-        }
-      } else {
-        verificationMessage = 'Evidence pending blockchain submission';
       }
 
       res.status(200).json({
         success: true,
         status: 'success',
         data: {
-          id: record.id,
-          pdf_hash: record.pdf_hash,
-          filename: record.pdf_filename,
-          company_name: record.company_name,
-          blockchain_status: record.blockchain_status,
-          snapshot_ordinal: record.snapshot_ordinal || null,
-          consensus_verified_at: record.consensus_verified_at || null,
-          blockchain_verified: blockchainVerified,
-          consensus_data: consensusData,
-          verification_status: blockchainVerified ? 'verified' : 'pending',
-          verification_message: verificationMessage,
-          created_at: record.created_at,
+          ...verificationData,
           implementation: {
-            type: 'ProofVault Metagraph with True Consensus',
-            stateClasses: ['EvidenceOnChainState', 'EvidenceCalculatedState'],
-            features: ['Snapshot ordinal tracking', 'SHA-256 state hashing', 'Court-admissible evidence']
+            type: 'Constellation Digital Evidence API',
+            features: ['Tamper-proof fingerprints', 'Legal evidence verification', 'Court-admissible certificates']
           }
         }
       });
@@ -964,7 +674,7 @@ const verifyPDFOnBlockchain = async (req, res, next) => {
     }
 
   } catch (error) {
-    console.error('Error verifying PDF on blockchain:', error);
+    console.error('Error verifying PDF with Digital Evidence:', error);
     next(error);
   }
 };

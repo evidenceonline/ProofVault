@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProofVault Test - Legal Evidence Capture</title>
+    <link rel="stylesheet" href="popup.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Test-specific styles */
+        body {
+            margin: 20px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .test-note {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 10px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-note">
+        TEST MODE - Chrome Extension Preview
+    </div>
+    
+    <div class="app-container">
+        <!-- Header Section -->
+        <header class="app-header">
+            <div class="brand-section">
+                <div class="logo-container">
+                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <div class="brand-text">
+                        <h1 class="brand-name">ProofVault</h1>
+                        <p class="brand-tagline">Legal Evidence Capture</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Evidence Capture Form -->
+            <section class="capture-section" id="captureSection">
+                <div class="section-header">
+                    <h2 class="section-title">Evidence Details</h2>
+                    <p class="section-description">Capture and authenticate webpage evidence with full metadata tracking</p>
+                </div>
+
+                <form class="evidence-form" id="evidenceForm" novalidate>
+                    <div class="form-group">
+                        <label for="company" class="form-label">
+                            <svg class="label-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M19 21V5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V21L12 18L19 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Organization Name
+                        </label>
+                        <input type="text" 
+                               id="company" 
+                               class="form-input" 
+                               placeholder="Enter your organization name" 
+                               value="Acme Legal Firm"
+                               required 
+                               autocomplete="organization"
+                               aria-describedby="company-help">
+                        <div class="input-help" id="company-help">The organization requesting this evidence capture</div>
+                        <div class="field-error" id="company-error" role="alert"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="user" class="form-label">
+                            <svg class="label-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Authenticated User
+                        </label>
+                        <input type="text" 
+                               id="user" 
+                               class="form-input" 
+                               placeholder="Enter the authenticated user name" 
+                               value="John Smith, Esq."
+                               required 
+                               autocomplete="name"
+                               aria-describedby="user-help">
+                        <div class="input-help" id="user-help">The authenticated user conducting this evidence capture</div>
+                        <div class="field-error" id="user-error" role="alert"></div>
+                    </div>
+                    
+                    <button type="submit" id="vaultBtn" class="primary-button" aria-describedby="vault-help">
+                        <svg class="button-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 15V6C21 5.20435 20.6839 4.44129 20.1213 3.87868C19.5587 3.31607 18.7956 3 18 3H6C5.20435 3 4.44129 3.31607 3.87868 3.87868C3.31607 4.44129 3 5.20435 3 6V15M21 15L18 21H6L3 15M21 15H3M12 7V13M15 10L12 13L9 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="button-text">Capture Evidence</span>
+                        <div class="button-spinner" id="buttonSpinner">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 3V6M12 18V21M4.22 4.22L6.34 6.34M17.66 17.66L19.78 19.78M3 12H6M18 12H21M4.22 19.78L6.34 17.66M17.66 6.34L19.78 4.22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="button-help" id="vault-help">Captures current webpage and generates authenticated PDF evidence with complete metadata</div>
+                </form>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="footer-content">
+                <p class="footer-text">Secure • Authenticated • Legally Compliant</p>
+                <div class="footer-version">v1.0</div>
+            </div>
+        </footer>
+    </div>
+    
+    <script>
+        // Simple test script to demonstrate interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            const vaultBtn = document.getElementById('vaultBtn');
+            const companyInput = document.getElementById('company');
+            const userInput = document.getElementById('user');
+            
+            vaultBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                alert('Test Mode: This would normally capture evidence!\n\nCompany: ' + companyInput.value + '\nUser: ' + userInput.value);
+            });
+            
+            // Demo button states
+            vaultBtn.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+            });
+            
+            vaultBtn.addEventListener('mouseleave', function() {
+                this.style.transform = '';
+            });
+        });
+    </script>
+</body>
+</html>

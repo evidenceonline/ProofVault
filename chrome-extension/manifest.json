@@ -34,6 +34,6 @@
     "128": "icons/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' http://proofvault.net:3003 http://localhost:3003; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline';"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' http://proofvault.net:4000 http://localhost:4001; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline';"
   }
 }

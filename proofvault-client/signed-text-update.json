@@ -1,0 +1,12 @@
+{
+  "value": {
+    "id": "my-doc-001",
+    "hash": "0x6d0f1234567890abcdefdeadbeef"
+  },
+  "proofs": [
+    {
+      "id": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8",
+      "signature": "3044022077b31ff509cc09489f79e3e1ab1576b685cca0940ea19c64117b87d2104f7f51022078ace747a44bbb3316924c1103e609cbd0037a2dba3c3a76302e3804539822f2"
+    }
+  ]
+}
