@@ -18,7 +18,7 @@ A modern React/Next.js dashboard for the ProofVault legal evidence management sy
 
 - Node.js 18+ 
 - npm or yarn
-- ProofVault API running at `http://proofvault.net:3001`
+- ProofVault API running at `http://localhost:4000`
 
 ## Installation
 
@@ -30,7 +30,7 @@ A modern React/Next.js dashboard for the ProofVault legal evidence management sy
 2. **Environment Configuration:**
    The application is pre-configured to work with the ProofVault API. Update `.env.local` if needed:
    ```bash
-   NEXT_PUBLIC_API_BASE_URL=http://proofvault.net:3001/api
+   NEXT_PUBLIC_API_BASE_URL=http://localhost:4000/api
    NEXT_PUBLIC_APP_NAME=ProofVault
    NEXT_PUBLIC_APP_DESCRIPTION=Legal Evidence Management System
    ```
@@ -41,7 +41,7 @@ A modern React/Next.js dashboard for the ProofVault legal evidence management sy
    ```
 
 4. **Open in browser:**
-   Navigate to `http://localhost:3000`
+   Navigate to `http://localhost:4002`
 
 ## Available Scripts
 

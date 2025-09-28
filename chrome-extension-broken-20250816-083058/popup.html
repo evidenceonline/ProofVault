@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ProofVault - Legal Evidence Capture</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <img class="logo" src="icons/logo.png" alt="ProofVault logo" />
+      <div class="brand">
+        <h1>ProofVault</h1>
+        <p>Legal Evidence Capture</p>
+      </div>
+    </header>
+
+    <main class="content">
+      <section class="card">
+        <h2>Evidence Details</h2>
+        <p class="muted">Capture and authenticate webpage evidence with full metadata tracking.</p>
+        <form id="evidenceForm">
+          <label>
+            Organization
+            <input id="company" type="text" placeholder="Enter organization" required />
+          </label>
+          <label>
+            Authenticated user
+            <input id="user" type="text" placeholder="Enter your name" required />
+          </label>
+          <button id="vaultBtn" type="submit" class="primary">Capture Evidence</button>
+        </form>
+      </section>
+
+      <section id="statusSection" class="card hidden">
+        <h3 id="statusTitle">Processing</h3>
+        <p id="statusMessage">Initializing...</p>
+        <div class="progress"><span id="progressFill"></span></div>
+      </section>
+
+      <section id="resultSection" class="card hidden">
+        <h3>Evidence Captured</h3>
+        <div class="kv">
+          <span>Evidence ID</span><code id="generatedId">—</code>
+        </div>
+        <div class="kv">
+          <span>Timestamp</span><span id="captureTimestamp">—</span>
+        </div>
+        <div class="actions">
+          <button id="downloadBtn" class="secondary">Download PDF</button>
+          <button id="viewOnlineBtn" class="ghost">Open in Web App</button>
+          <button id="captureAnotherBtn" class="ghost">Capture another</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>Secure • Authenticated • Legally Compliant</span>
+      <span>v1.1</span>
+    </footer>
+  </div>
+
+  <!-- Using jsPDF for PDF generation -->
+  <script src="jspdf.umd.min.js"></script>
+  <!-- Using PDF-lib for PDF merging -->
+  <script src="libs/pdf-lib.min.js"></script>
+  <script src="config.js"></script>
+  <script src="utils.js"></script>
+  <script src="pdfGenerator.js"></script>
+  <script src="api.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

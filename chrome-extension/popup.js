@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   viewOnlineBtn.addEventListener('click', () => {
     if(!currentId) return;
-    chrome.tabs.create({ url: `http://proofvault.net:3002/?search=${currentId}` });
+    chrome.tabs.create({ url: PV_CONFIG.WEB_APP_URL });
   });
 
   captureAnotherBtn.addEventListener('click', () => {

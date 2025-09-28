@@ -10,6 +10,16 @@ interface EvidenceRecord {
   created_at: string;
   pdf_hash?: string;
   file_id?: string;
+  blockchain_status?: string;
+  blockchain_tx_id?: string;
+  blockchain_verified_at?: string;
+}
+
+interface DigitalEvidenceStatus {
+  status: 'NEW' | 'QUEUED' | 'PROCESSING' | 'PENDING_COMMITMENT' | 'FINALIZED_COMMITMENT' | 'ERRORED_COMMITMENT' | 'NOT_FOUND' | 'ERROR';
+  explorerUrl?: string;
+  confirmationTimestamp?: string;
+  error?: string;
 }
 
 interface SortConfig {
@@ -26,6 +36,8 @@ export default function HomePage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadingActions, setLoadingActions] = useState<{ [key: string]: boolean }>({});
   const [viewModalData, setViewModalData] = useState<EvidenceRecord | null>(null);
+  const [digitalEvidenceStatus, setDigitalEvidenceStatus] = useState<DigitalEvidenceStatus | null>(null);
+  const [loadingDigitalEvidence, setLoadingDigitalEvidence] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'created_at', direction: 'desc' });
   const [dateFilter, setDateFilter] = useState('');
   
@@ -212,21 +224,89 @@ export default function HomePage() {
     }
   };
 
+  // Fetch Digital Evidence verification status
+  const fetchDigitalEvidenceStatus = async (recordId: string) => {
+    try {
+      setLoadingDigitalEvidence(true);
+      setDigitalEvidenceStatus(null);
+
+      const response = await fetch(`/api/pdf/${recordId}/verify`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch verification status: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        const data = result.data;
+
+        // Map the verification status from our API to Digital Evidence status
+        let status: DigitalEvidenceStatus['status'] = 'ERROR';
+
+        if (data.digital_evidence_status) {
+          switch (data.digital_evidence_status) {
+            case 'NEW':
+            case 'QUEUED':
+            case 'PROCESSING':
+            case 'PENDING_COMMITMENT':
+            case 'FINALIZED_COMMITMENT':
+            case 'ERRORED_COMMITMENT':
+              status = data.digital_evidence_status;
+              break;
+            case 'NOT_FOUND':
+              status = 'NOT_FOUND';
+              break;
+            default:
+              status = 'ERROR';
+          }
+        } else if (data.verification_status === 'verified') {
+          status = 'FINALIZED_COMMITMENT';
+        } else if (data.verification_status === 'pending') {
+          status = 'PENDING_COMMITMENT';
+        } else {
+          status = 'ERROR';
+        }
+
+        const digitalStatus: DigitalEvidenceStatus = {
+          status,
+          explorerUrl: data.explorer_url || (data.fingerprint_hash ? `https://digitalevidence.constellationnetwork.io/fingerprint/${data.fingerprint_hash}` : undefined),
+          confirmationTimestamp: data.blockchain_verified_at,
+          error: data.verification_message
+        };
+
+        setDigitalEvidenceStatus(digitalStatus);
+      } else {
+        throw new Error('Invalid response format');
+      }
+    } catch (err) {
+      console.error('Error fetching Digital Evidence status:', err);
+      setDigitalEvidenceStatus({
+        status: 'ERROR',
+        error: err instanceof Error ? err.message : 'Failed to fetch verification status'
+      });
+    } finally {
+      setLoadingDigitalEvidence(false);
+    }
+  };
+
   // Handle View - show PDF metadata
   const handleView = async (recordId: string) => {
     try {
       setLoadingActions(prev => ({ ...prev, [`view-${recordId}`]: true }));
-      
+
       const response = await fetch(`/api/pdf/${recordId}`);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch PDF metadata: ${response.status} ${response.statusText}`);
       }
-      
+
       const result = await response.json();
-      
+
       if (result.success && result.data) {
         setViewModalData(result.data);
+        // Fetch Digital Evidence status when viewing details
+        await fetchDigitalEvidenceStatus(recordId);
       } else {
         throw new Error('Invalid response format');
       }
@@ -269,7 +349,7 @@ export default function HomePage() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (viewModalData && e.key === 'Escape') {
-        setViewModalData(null);
+        closeModal();
       }
     };
 
@@ -283,6 +363,39 @@ export default function HomePage() {
       modalRef.current.focus();
     }
   }, [viewModalData]);
+
+  // Format Digital Evidence status for display
+  const formatDigitalEvidenceStatus = (status: DigitalEvidenceStatus) => {
+    const getStatusInfo = (status: DigitalEvidenceStatus['status']) => {
+      switch (status) {
+        case 'FINALIZED_COMMITMENT':
+          return { text: 'Verified', icon: '✅', color: 'var(--color-success-600)', bgColor: 'var(--color-success-50)' };
+        case 'PENDING_COMMITMENT':
+          return { text: 'Pending', icon: '⏳', color: 'var(--color-warning-600)', bgColor: 'var(--color-warning-50)' };
+        case 'PROCESSING':
+          return { text: 'Processing', icon: '⚙️', color: 'var(--color-info-600)', bgColor: 'var(--color-info-50)' };
+        case 'QUEUED':
+          return { text: 'Queued', icon: '📋', color: 'var(--color-info-600)', bgColor: 'var(--color-info-50)' };
+        case 'NEW':
+          return { text: 'New', icon: '🆕', color: 'var(--color-info-600)', bgColor: 'var(--color-info-50)' };
+        case 'ERRORED_COMMITMENT':
+          return { text: 'Error', icon: '❌', color: 'var(--color-error-600)', bgColor: 'var(--color-error-50)' };
+        case 'NOT_FOUND':
+          return { text: 'Not Found', icon: '❓', color: 'var(--color-neutral-600)', bgColor: 'var(--color-neutral-50)' };
+        case 'ERROR':
+        default:
+          return { text: 'Error', icon: '❌', color: 'var(--color-error-600)', bgColor: 'var(--color-error-50)' };
+      }
+    };
+
+    return getStatusInfo(status.status);
+  };
+
+  // Clear modal data and digital evidence status
+  const closeModal = () => {
+    setViewModalData(null);
+    setDigitalEvidenceStatus(null);
+  };
 
   // Get sort icon
   const getSortIcon = (columnKey: keyof EvidenceRecord) => {
@@ -491,9 +604,19 @@ export default function HomePage() {
                       <div className="card-header">
                         <div className="card-title">
                           <span className="company-name">{record.company_name}</span>
-                          <span className="status-badge status-verified" role="img" aria-label="Verified status">
-                            <span aria-hidden="true">✓</span> Verified
-                          </span>
+                          {record.blockchain_status === 'submitted' ? (
+                            <span className="status-badge" style={{ color: 'var(--color-success-600)', backgroundColor: 'var(--color-success-50)' }} role="img" aria-label="Blockchain submitted">
+                              <span aria-hidden="true">✅</span> Submitted
+                            </span>
+                          ) : record.blockchain_status === 'failed' ? (
+                            <span className="status-badge" style={{ color: 'var(--color-error-600)', backgroundColor: 'var(--color-error-50)' }} role="img" aria-label="Blockchain failed">
+                              <span aria-hidden="true">❌</span> Failed
+                            </span>
+                          ) : (
+                            <span className="status-badge" style={{ color: 'var(--color-neutral-600)', backgroundColor: 'var(--color-neutral-50)' }} role="img" aria-label="Blockchain pending">
+                              <span aria-hidden="true">⏳</span> Pending
+                            </span>
+                          )}
                         </div>
                         <div className="card-date">
                           <time dateTime={record.created_at}>
@@ -650,9 +773,19 @@ export default function HomePage() {
                         </time>
                       </td>
                       <td role="gridcell">
-                        <span className="status-badge status-verified" role="img" aria-label="Verified status">
-                          <span aria-hidden="true">✓</span> Verified
-                        </span>
+                        {record.blockchain_status === 'submitted' ? (
+                          <span className="status-badge" style={{ color: 'var(--color-success-600)', backgroundColor: 'var(--color-success-50)' }} role="img" aria-label="Blockchain submitted">
+                            <span aria-hidden="true">✅</span> Submitted
+                          </span>
+                        ) : record.blockchain_status === 'failed' ? (
+                          <span className="status-badge" style={{ color: 'var(--color-error-600)', backgroundColor: 'var(--color-error-50)' }} role="img" aria-label="Blockchain failed">
+                            <span aria-hidden="true">❌</span> Failed
+                          </span>
+                        ) : (
+                          <span className="status-badge" style={{ color: 'var(--color-neutral-600)', backgroundColor: 'var(--color-neutral-50)' }} role="img" aria-label="Blockchain pending">
+                            <span aria-hidden="true">⏳</span> Pending
+                          </span>
+                        )}
                       </td>
                       <td role="gridcell">
                         <div className="action-buttons" role="group" aria-label={`Actions for evidence ${record.id}`}>
@@ -798,9 +931,9 @@ export default function HomePage() {
 
       {/* Evidence Details Modal */}
       {viewModalData && (
-        <div 
+        <div
           className="modal-backdrop"
-          onClick={() => setViewModalData(null)}
+          onClick={closeModal}
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-title"
@@ -873,30 +1006,95 @@ export default function HomePage() {
               )}
               
               <div className="detail-item">
-                <div className="detail-label">Verification Status</div>
+                <div className="detail-label">Digital Evidence Verification Status</div>
                 <div className="detail-value">
-                  <span className="status-badge status-verified" role="img" aria-label="Blockchain verified">
-                    <span aria-hidden="true">✓</span> Blockchain Verified
-                  </span>
+                  {loadingDigitalEvidence ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="loading-spinner" aria-hidden="true"></span>
+                      <span>Checking verification status...</span>
+                    </div>
+                  ) : digitalEvidenceStatus ? (
+                    <>
+                      <span
+                        className="status-badge"
+                        style={{
+                          color: formatDigitalEvidenceStatus(digitalEvidenceStatus).color,
+                          backgroundColor: formatDigitalEvidenceStatus(digitalEvidenceStatus).bgColor,
+                          border: `1px solid ${formatDigitalEvidenceStatus(digitalEvidenceStatus).color}`,
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        role="img"
+                        aria-label={`Digital Evidence status: ${formatDigitalEvidenceStatus(digitalEvidenceStatus).text}`}
+                      >
+                        <span aria-hidden="true">{formatDigitalEvidenceStatus(digitalEvidenceStatus).icon}</span>
+                        {formatDigitalEvidenceStatus(digitalEvidenceStatus).text}
+                      </span>
+
+                      {digitalEvidenceStatus.explorerUrl && (
+                        <div style={{ marginTop: '8px' }}>
+                          <a
+                            href={digitalEvidenceStatus.explorerUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              color: 'var(--color-primary-600)',
+                              textDecoration: 'none',
+                              fontSize: '14px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                            onMouseOut={(e) => e.currentTarget.style.textDecoration = 'none'}
+                          >
+                            <span aria-hidden="true">🔗</span>
+                            View on Digital Evidence Explorer
+                          </a>
+                        </div>
+                      )}
+
+                      {digitalEvidenceStatus.confirmationTimestamp && (
+                        <div style={{ marginTop: '4px', fontSize: '12px', color: 'var(--color-neutral-600)' }}>
+                          Confirmed: {formatDate(digitalEvidenceStatus.confirmationTimestamp)}
+                        </div>
+                      )}
+
+                      {digitalEvidenceStatus.error && digitalEvidenceStatus.status === 'ERROR' && (
+                        <div style={{ marginTop: '4px', fontSize: '12px', color: 'var(--color-error-600)' }}>
+                          Error: {digitalEvidenceStatus.error}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <span className="status-badge" style={{ color: 'var(--color-neutral-600)', backgroundColor: 'var(--color-neutral-50)' }}>
+                      <span aria-hidden="true">❓</span> Status not checked
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
             
             <div className="modal-footer">
-              <button 
+              <button
                 type="button"
                 className="btn btn-secondary"
-                onClick={() => setViewModalData(null)}
+                onClick={closeModal}
                 aria-label="Close evidence details modal"
               >
                 Close
               </button>
-              <button 
+              <button
                 type="button"
                 className="btn btn-primary"
                 onClick={() => {
                   handleDownload(viewModalData.id, viewModalData.pdf_filename);
-                  setViewModalData(null);
+                  closeModal();
                 }}
                 aria-label={`Download PDF: ${viewModalData.pdf_filename}`}
               >
