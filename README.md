@@ -22,7 +22,7 @@
 
 ## 🔍 Overview
 
-ProofVault is a comprehensive system that creates **cryptographic digital evidence** for web-captured content using Constellation Network metagraphs. Transform any webpage into legally-defensible digital artifacts with blockchain-backed proof of integrity and immutable timestamps.
+ProofVault is a comprehensive system that creates **cryptographic digital evidence** for web-captured content using Constellation Network's Digital Evidence API. Transform any webpage into legally-defensible digital artifacts with blockchain-backed proof of integrity and immutable timestamps.
 
 ### The Problem
 In our digital age, proving the authenticity and integrity of web-based evidence is increasingly challenging:
@@ -59,9 +59,8 @@ ProofVault provides a complete chain of custody for digital evidence through:
 ### Prerequisites
 - **Node.js** 18+
 - **PostgreSQL** 13+
-- **Docker** (8GB+ RAM recommended)
 - **Chrome Browser**
-- **Rust/Cargo** (for hydra script)
+- **Constellation Digital Evidence API Account** (for blockchain integration)
 
 ### Installation
 
@@ -69,32 +68,46 @@ ProofVault provides a complete chain of custody for digital evidence through:
    ```bash
    git clone https://github.com/evidenceonline/ProofVault.git
    cd ProofVault
+   git checkout digital-evidence
    ```
 
 2. **Install dependencies**
    ```bash
-   npm run install:all
+   # Install API dependencies
+   cd api && npm install
+
+   # Install frontend dependencies
+   cd ../frontend && npm install
    ```
 
-3. **Set up blockchain environment**
+3. **Configure Digital Evidence API**
    ```bash
-   cd scripts/
-   # Install argc for hydra script
-   cargo install argc
-   
-   # Build and start metagraph
-   ./hydra build
-   ./hydra start-genesis
+   # Copy environment template
+   cp api/.env.example api/.env
+
+   # Edit .env file with your Digital Evidence API credentials:
+   # DE_API_KEY=your_api_key
+   # DE_ORGANIZATION_ID=your_org_id
+   # DE_TENANT_ID=your_tenant_id
    ```
 
-4. **Start the application**
+4. **Set up PostgreSQL database**
    ```bash
-   # Return to root directory
-   cd ../
-   npm run dev
+   # Create database and run setup script
+   psql -U postgres -c "CREATE DATABASE proofvault;"
+   psql -U postgres -d proofvault -f setup_proofvaultdb_test.sql
    ```
 
-5. **Load Chrome extension**
+5. **Start the application**
+   ```bash
+   # Start API server (from api directory)
+   cd api && npm start
+
+   # Start frontend (from frontend directory, new terminal)
+   cd frontend && npm start
+   ```
+
+6. **Load Chrome extension**
    - Navigate to `chrome://extensions/`
    - Enable "Developer mode"
    - Click "Load unpacked" and select `chrome-extension/` directory
@@ -107,30 +120,29 @@ graph TB
     A[Chrome Extension] --> B[PDF Generation]
     B --> C[SHA-256 Hashing]
     C --> D[Backend API]
-    D --> E[Metagraph Registration]
+    D --> E[Digital Evidence API]
     E --> F[Constellation Network]
     D --> G[PostgreSQL Database]
-    H[Frontend Registry] --> D
-    I[Public Verification] --> H
+    H[Frontend Dashboard] --> D
+    I[Blockchain Verification] --> F
 ```
 
 ### Component Structure
 ```
 ProofVault/
 ├── chrome-extension/    # Browser extension for PDF capture
-├── backend-api/         # Node.js API server with metagraph integration  
-├── frontend/           # React verification interface
-├── metagraph/          # Custom Constellation Network L0/L1 implementation
-├── database/           # PostgreSQL schemas and setup
-├── docs/              # Technical documentation
-└── scripts/           # Euclid development environment (hydra)
+├── api/                # Node.js API server with Digital Evidence integration
+├── frontend/           # Next.js dashboard interface
+├── proofvault-client/  # Blockchain client utilities
+├── DOCUMENTATION.md    # Complete technical documentation
+└── setup_proofvaultdb_test.sql  # Database setup
 ```
 
-### Blockchain Layers
-- **Global L0**: Constellation Network main chain
-- **Metagraph L0**: ProofVault custom application chain  
-- **Currency L1**: Token/currency operations
-- **Data L1**: Custom evidence transaction layer
+### Integration Layers
+- **Chrome Extension**: Captures web content and generates PDFs
+- **API Backend**: Processes evidence and integrates with Digital Evidence API
+- **Digital Evidence API**: Constellation Network's managed blockchain service
+- **Constellation Network**: Immutable blockchain storage and verification
 
 ## 🎯 Use Cases
 
@@ -147,69 +159,44 @@ ProofVault/
 ### Available Scripts
 
 ```bash
-# Development (all components)
-npm run dev
+# Start API server
+cd api && npm start
 
-# Build all components  
-npm run build
+# Start frontend dashboard
+cd frontend && npm start
 
-# Run tests
-npm run test
+# Run development mode with auto-reload
+cd api && npm run dev
+cd frontend && npm run dev
 
-# Lint code
-npm run lint
-
-# Individual component commands
-npm run dev:backend     # Backend API only
-npm run dev:frontend    # Frontend only  
-npm run build:extension # Extension only
-```
-
-### Blockchain Operations (Hydra)
-
-```bash
-cd scripts/
-
-# Core operations
-./hydra build           # Build containers
-./hydra start-genesis   # Start from genesis (fresh start)
-./hydra start-rollback  # Start from snapshot (preserve history)
-./hydra stop           # Stop containers
-./hydra status         # Check status
-./hydra logs <node>    # View logs
-
-# Remote deployment
-./hydra remote-deploy  # Deploy to cloud
-./hydra remote-start   # Start remote nodes
-./hydra remote-status  # Check remote status
+# Install dependencies
+cd api && npm install
+cd frontend && npm install
 ```
 
 ## 🌐 Network Information
 
 ### Local Development URLs
-- **Backend API**: `http://localhost:3001`
-- **Frontend**: `http://localhost:3000`
-- **Global L0**: `http://localhost:9000`
-- **Metagraph L0**: `http://localhost:9200`
-- **Currency L1**: `http://localhost:9300`
-- **Data L1**: `http://localhost:9400`
-- **Grafana Monitoring**: `http://localhost:3000`
+- **API Backend**: `http://localhost:4000`
+- **Frontend Dashboard**: `http://localhost:4002`
+- **Digital Evidence Explorer**: `https://digitalevidence.constellationnetwork.io/`
 
 ### Verification Process
 1. **Hash Generation**: SHA-256 of PDF content
-2. **Blockchain Query**: Check metagraph for hash record
-3. **Timestamp Verification**: Confirm registration time
-4. **Signature Validation**: Verify submitter authenticity
-5. **Integrity Proof**: Mathematical verification of document integrity
+2. **Digital Evidence Submission**: Submit fingerprint via Digital Evidence API
+3. **Blockchain Recording**: Immutable storage on Constellation Network
+4. **Status Tracking**: Real-time verification status updates
+5. **Public Verification**: Access verification certificates via blockchain explorer
 
 ## 📚 Documentation
 
-- **[System Design](docs/DESIGN.md)** - Technical architecture overview
-- **[API Reference](docs/API.md)** - Backend endpoints documentation  
-- **[Extension Guide](docs/EXTENSION.md)** - Chrome extension usage
-- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production setup instructions
-- **[Contributing Guide](docs/CONTRIBUTING.md)** - Development guidelines
-- **[PDF Evidence System Design](PDF_EVIDENCE_SYSTEM_DESIGN.md)** - Complete technical specification
+- **[Complete Documentation](DOCUMENTATION.md)** - Comprehensive system documentation including:
+  - Technical architecture and implementation
+  - Production deployment guide
+  - Legal framework and court admissibility
+  - API reference and usage instructions
+  - Blockchain integration details
+  - Troubleshooting guide
 
 ## 🔒 Security Model
 
@@ -246,8 +233,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 ## 🙏 Acknowledgments
 
 - Built on [Constellation Network](https://constellationnetwork.io/) infrastructure
-- Powered by [Tessellation Framework](https://github.com/Constellation-Labs/tessellation)
-- Uses [Euclid Development Environment](https://github.com/Constellation-Labs/euclid-development-environment)
+- Powered by [Digital Evidence API](https://digitalevidence.constellationnetwork.io/)
 - Inspired by the critical need for trustworthy digital evidence in our digital world
 
 **[⭐ Star this repo](https://github.com/evidenceonline/ProofVault)** if you find ProofVault useful!
