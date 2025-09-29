@@ -81,6 +81,12 @@ NODE_ENV=development
 PORT=3000
 HOST=0.0.0.0
 
+# Authentication
+JWT_SECRET=your_jwt_secret
+# Comma-separated list in the format role:api_key
+API_KEYS=admin:super-secret-key,viewer:readonly-key
+DEFAULT_API_KEY_ROLE=service
+
 # Database Configuration
 DB_HOST=localhost
 DB_PORT=5432
@@ -111,6 +117,23 @@ CREATE TABLE pdf_records (
 ### Base URL
 - Development: `http://localhost:3000`
 - Production: `https://your-domain.com`
+
+### Authentication
+
+All PDF routes require one of the supported authentication methods:
+
+- **JWT Bearer tokens** – include an `Authorization: Bearer <token>` header. Tokens are validated with `JWT_SECRET` and should provide either a `role` claim (string) or `roles` array.
+- **API keys** – include an `X-API-Key: <key>` header. Configure keys in the `API_KEYS` environment variable using the `role:key` format. Keys without a role use `DEFAULT_API_KEY_ROLE`.
+
+Unauthenticated requests receive `401 Unauthorized`. Delete actions additionally require the `admin` or `manager` role and return `403 Forbidden` if the caller lacks the proper permissions.
+
+### Rate Limiting
+
+- **Global**: 300 requests per 15 minutes per IP across the API.
+- **Uploads**: 30 upload requests per 15 minutes per IP (`POST /api/pdf/upload`).
+- **Deletes**: 10 delete requests per hour per IP (`DELETE /api/pdf/:id`).
+
+When a rate limit is exceeded, the API responds with `429 Too Many Requests` and includes standard rate limit headers.
 
 ### Health Endpoints
 
@@ -271,6 +294,8 @@ curl -O -J http://localhost:3000/api/pdf/550e8400-e29b-41d4-a716-446655440000?do
 
 #### DELETE /api/pdf/:id
 Delete a PDF record.
+
+> **Required role:** `admin` or `manager`
 
 **Path Parameters:**
 - `id` (UUID, required): PDF record ID

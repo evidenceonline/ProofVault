@@ -2,6 +2,22 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+const buildAuthHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {};
+  const token = process.env.NEXT_PUBLIC_PROOFVAULT_API_TOKEN;
+  const apiKey = process.env.NEXT_PUBLIC_PROOFVAULT_API_KEY;
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  if (apiKey) {
+    headers['X-API-Key'] = apiKey;
+  }
+
+  return headers;
+};
+
 interface EvidenceRecord {
   id: string;
   company_name: string;
@@ -85,7 +101,9 @@ export default function HomePage() {
         params.append('date_to', dateFilter);
       }
       
-      const response = await fetch(`/api/pdf/list?${params}`);
+      const response = await fetch(`/api/pdf/list?${params}`, {
+        headers: buildAuthHeaders()
+      });
       
       if (!response.ok) {
         throw new Error(`Failed to fetch records: ${response.status} ${response.statusText}`);
@@ -200,7 +218,9 @@ export default function HomePage() {
     try {
       setLoadingActions(prev => ({ ...prev, [`download-${recordId}`]: true }));
       
-      const response = await fetch(`/api/pdf/${recordId}?download=true`);
+      const response = await fetch(`/api/pdf/${recordId}?download=true`, {
+        headers: buildAuthHeaders()
+      });
       
       if (!response.ok) {
         throw new Error(`Failed to download PDF: ${response.status} ${response.statusText}`);
@@ -230,7 +250,9 @@ export default function HomePage() {
       setLoadingDigitalEvidence(true);
       setDigitalEvidenceStatus(null);
 
-      const response = await fetch(`/api/pdf/${recordId}/verify`);
+      const response = await fetch(`/api/pdf/${recordId}/verify`, {
+        headers: buildAuthHeaders()
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to fetch verification status: ${response.status} ${response.statusText}`);
@@ -295,7 +317,9 @@ export default function HomePage() {
     try {
       setLoadingActions(prev => ({ ...prev, [`view-${recordId}`]: true }));
 
-      const response = await fetch(`/api/pdf/${recordId}`);
+      const response = await fetch(`/api/pdf/${recordId}`, {
+        headers: buildAuthHeaders()
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to fetch PDF metadata: ${response.status} ${response.statusText}`);

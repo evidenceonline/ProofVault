@@ -2,15 +2,17 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const { generalRateLimiter } = require('./middleware/rateLimiters');
 require('dotenv').config();
 
 // Import middleware
-const { 
-  errorHandler, 
-  notFoundHandler, 
-  handleUnhandledRejection, 
-  handleUncaughtException 
+const {
+  errorHandler,
+  notFoundHandler,
+  handleUnhandledRejection,
+  handleUncaughtException
 } = require('./middleware/errorHandler');
+const { authenticate } = require('./middleware/auth');
 
 // Import routes
 const pdfRoutes = require('./routes/pdf');
@@ -28,6 +30,9 @@ const app = express();
 
 // Trust proxy (important for getting real IP addresses behind reverse proxy)
 app.set('trust proxy', 1);
+
+// Global rate limiting
+app.use(generalRateLimiter);
 
 // Security middleware
 app.use(helmet({
@@ -142,7 +147,7 @@ app.get('/', (req, res) => {
 
 // API routes
 app.use('/api/health', healthRoutes);
-app.use('/api/pdf', pdfRoutes);
+app.use('/api/pdf', authenticate, pdfRoutes);
 
 // Handle 404 errors
 app.use(notFoundHandler);

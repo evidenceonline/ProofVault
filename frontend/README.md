@@ -33,6 +33,10 @@ A modern React/Next.js dashboard for the ProofVault legal evidence management sy
    NEXT_PUBLIC_API_BASE_URL=http://localhost:4000/api
    NEXT_PUBLIC_APP_NAME=ProofVault
    NEXT_PUBLIC_APP_DESCRIPTION=Legal Evidence Management System
+   # Choose one of the following depending on your auth strategy
+   NEXT_PUBLIC_PROOFVAULT_API_TOKEN=eyJhbGciOi...
+   # or provide an API key mapped to a role on the server
+   NEXT_PUBLIC_PROOFVAULT_API_KEY=readonly-key
    ```
 
 3. **Start development server:**
@@ -150,6 +154,7 @@ The frontend communicates with the ProofVault API using:
 - Implement proper error handling without exposing sensitive data
 - Use HTTPS in production
 - Sanitize file uploads and downloads
+- Configure the dashboard with either `NEXT_PUBLIC_PROOFVAULT_API_TOKEN` (JWT) or `NEXT_PUBLIC_PROOFVAULT_API_KEY` so that every request includes the required authentication headers
 
 ## Browser Support
 

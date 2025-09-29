@@ -1,5 +1,7 @@
 const express = require('express');
 const { uploadSinglePDF } = require('../middleware/upload');
+const { authorizeRoles } = require('../middleware/auth');
+const { uploadRateLimiter, deleteRateLimiter } = require('../middleware/rateLimiters');
 const {
   uploadPDF,
   getPDFList,
@@ -12,7 +14,7 @@ const {
 const router = express.Router();
 
 // POST /api/pdf/upload - Upload a PDF file
-router.post('/upload', uploadSinglePDF, uploadPDF);
+router.post('/upload', uploadRateLimiter, uploadSinglePDF, uploadPDF);
 
 // GET /api/pdf/list - Get list of PDFs with pagination and filtering
 // Query parameters:
@@ -39,6 +41,6 @@ router.get('/:id', getPDFById);
 router.get('/:id/verify', verifyPDFOnBlockchain);
 
 // DELETE /api/pdf/:id - Delete PDF by ID
-router.delete('/:id', deletePDFById);
+router.delete('/:id', deleteRateLimiter, authorizeRoles('admin', 'manager'), deletePDFById);
 
 module.exports = router;
