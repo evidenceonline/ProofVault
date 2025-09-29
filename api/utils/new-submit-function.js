@@ -21,7 +21,7 @@ const submitToBlockchain = async (recordId, pdfHash, filename, companyName) => {
         `UPDATE pdf_records SET
          blockchain_tx_id = $1,
          blockchain_status = $2,
-         blockchain_verified_at = NOW()
+         blockchain_verified_at = NULL
          WHERE id = $3`,
         [result.fingerprintHash, 'submitted', recordId]
       );

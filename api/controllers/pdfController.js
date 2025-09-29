@@ -313,18 +313,61 @@ const getPDFById = async (req, res, next) => {
       // Otherwise, return metadata only
       // Get Digital Evidence status dynamically if fingerprint hash exists
       let blockchainStatus = record.blockchain_status || 'unknown';
-      let blockchainVerified = false;
+      let blockchainVerified = blockchainStatus === 'verified';
 
-      if (record.blockchain_tx_id && record.blockchain_status === 'submitted') {
+      if (record.blockchain_tx_id) {
         try {
           // Check Digital Evidence API status
           const statusResult = await digitalEvidenceClient.checkFingerprintStatus(record.blockchain_tx_id);
+          const pendingStatuses = new Set(['PENDING', 'PENDING_COMMITMENT', 'PROCESSING', 'QUEUED', 'NEW']);
+
           if (statusResult.status === 'FINALIZED_COMMITMENT') {
             blockchainStatus = 'verified';
             blockchainVerified = true;
-          } else if (statusResult.status === 'PENDING') {
-            blockchainStatus = 'pending';
+
+            if (record.blockchain_status !== 'verified' || !record.blockchain_verified_at) {
+              const updateClient = await pool.connect();
+              try {
+                const updateResult = await updateClient.query(
+                  `UPDATE pdf_records
+                   SET blockchain_status = $1,
+                       blockchain_verified_at = COALESCE(blockchain_verified_at, NOW())
+                   WHERE id = $2
+                   RETURNING blockchain_verified_at`,
+                  ['verified', record.id]
+                );
+
+                if (updateResult.rows[0]) {
+                  record.blockchain_verified_at = updateResult.rows[0].blockchain_verified_at;
+                }
+              } catch (dbError) {
+                console.error('Failed to persist verified status:', dbError);
+              } finally {
+                updateClient.release();
+              }
+            }
+          } else if (pendingStatuses.has(statusResult.status)) {
+            blockchainStatus = 'submitted';
             blockchainVerified = false;
+
+            if (record.blockchain_verified_at) {
+              const resetClient = await pool.connect();
+              try {
+                await resetClient.query(
+                  `UPDATE pdf_records
+                   SET blockchain_verified_at = NULL,
+                       blockchain_status = $1
+                   WHERE id = $2`,
+                  ['submitted', record.id]
+                );
+              } catch (resetError) {
+                console.error('Failed to clear premature verification timestamp:', resetError);
+              } finally {
+                resetClient.release();
+              }
+
+              record.blockchain_verified_at = null;
+            }
           } else {
             blockchainStatus = 'error';
             blockchainVerified = false;
@@ -336,6 +379,8 @@ const getPDFById = async (req, res, next) => {
       } else if (!record.blockchain_tx_id) {
         blockchainStatus = 'not_submitted';
       }
+
+      record.blockchain_status = blockchainStatus;
 
       res.status(200).json({
         success: true,
@@ -351,7 +396,7 @@ const getPDFById = async (req, res, next) => {
           created_at: record.created_at,
           updated_at: record.updated_at,
           file_id: record.file_id,
-          blockchain_status: record.blockchain_status || blockchainStatus,
+          blockchain_status: blockchainStatus,
           blockchain_tx_id: record.blockchain_tx_id,
           blockchain_verified: blockchainVerified,
           blockchain_verified_at: record.blockchain_verified_at,
@@ -543,7 +588,7 @@ const submitToBlockchain = async (recordId, pdfHash, filename, companyName) => {
         `UPDATE pdf_records SET
          blockchain_tx_id = $1,
          blockchain_status = $2,
-         blockchain_verified_at = NOW()
+         blockchain_verified_at = NULL
          WHERE id = $3`,
         [result.fingerprintHash, 'submitted', recordId]
       );
@@ -612,49 +657,115 @@ const verifyPDFOnBlockchain = async (req, res, next) => {
       const record = result.rows[0];
       client.release();
 
-      let verificationData = {
+      const hasFingerprint = Boolean(record.blockchain_tx_id);
+      let currentStatus = record.blockchain_status || (hasFingerprint ? 'submitted' : 'pending');
+      let blockchainVerified = currentStatus === 'verified';
+      let verifiedAt = record.blockchain_verified_at;
+      let verificationStatus = blockchainVerified ? 'verified' : currentStatus === 'submitted' ? 'submitted' : 'pending';
+      let verificationMessage = blockchainVerified
+        ? 'Evidence verified on Constellation Digital Evidence API'
+        : currentStatus === 'submitted'
+          ? 'Evidence submitted, awaiting consensus finalization'
+          : 'Evidence pending Digital Evidence submission';
+      let explorerUrl = null;
+      let digitalEvidenceStatus = null;
+
+      // Check Digital Evidence API status if we have a fingerprint hash
+      if (record.blockchain_tx_id) {
+        try {
+          const statusResult = await digitalEvidenceClient.checkFingerprintStatus(record.blockchain_tx_id);
+          digitalEvidenceStatus = statusResult.status;
+          explorerUrl = statusResult.explorerUrl || null;
+
+          if (statusResult.status === 'FINALIZED_COMMITMENT') {
+            if (currentStatus !== 'verified' || !verifiedAt) {
+              const updateClient = await pool.connect();
+              try {
+                const updateResult = await updateClient.query(
+                  `UPDATE pdf_records
+                   SET blockchain_status = $1,
+                       blockchain_verified_at = COALESCE(blockchain_verified_at, NOW())
+                   WHERE id = $2
+                   RETURNING blockchain_verified_at`,
+                  ['verified', record.id]
+                );
+
+                if (updateResult.rows[0]) {
+                  verifiedAt = updateResult.rows[0].blockchain_verified_at;
+                }
+              } catch (dbError) {
+                console.error('Failed to persist verified status:', dbError);
+              } finally {
+                updateClient.release();
+              }
+            }
+
+            currentStatus = 'verified';
+            blockchainVerified = true;
+            verificationStatus = 'verified';
+            verificationMessage = 'Evidence verified on Constellation Digital Evidence API';
+          } else {
+            const pendingStatuses = new Set([
+              'PENDING',
+              'PENDING_COMMITMENT',
+              'PROCESSING',
+              'QUEUED',
+              'NEW'
+            ]);
+
+            if (pendingStatuses.has(statusResult.status)) {
+              currentStatus = 'submitted';
+              blockchainVerified = false;
+              verificationStatus = 'submitted';
+              verificationMessage = 'Evidence submitted, awaiting consensus finalization';
+
+              if (verifiedAt) {
+                const resetClient = await pool.connect();
+                try {
+                  await resetClient.query(
+                    `UPDATE pdf_records
+                     SET blockchain_verified_at = NULL,
+                         blockchain_status = $1
+                     WHERE id = $2`,
+                    ['submitted', record.id]
+                  );
+                } catch (resetError) {
+                  console.error('Failed to clear premature verification timestamp:', resetError);
+                } finally {
+                  resetClient.release();
+                }
+
+                verifiedAt = null;
+              }
+            } else {
+              verificationStatus = 'error';
+              verificationMessage = statusResult.error || 'Unknown status returned from Digital Evidence API';
+              blockchainVerified = false;
+            }
+          }
+        } catch (statusError) {
+          console.error('Error checking Digital Evidence status:', statusError);
+          verificationStatus = 'error';
+          verificationMessage = 'Could not verify Digital Evidence status';
+          blockchainVerified = false;
+        }
+      }
+
+      const verificationData = {
         id: record.id,
         pdf_hash: record.pdf_hash,
         filename: record.pdf_filename,
         company_name: record.company_name,
-        blockchain_status: record.blockchain_status,
-        blockchain_verified_at: record.blockchain_verified_at,
+        blockchain_status: currentStatus,
+        blockchain_verified_at: verifiedAt,
         created_at: record.created_at,
         fingerprint_hash: record.blockchain_tx_id,
-        verification_status: 'pending',
-        verification_message: 'Evidence pending Digital Evidence submission',
-        explorer_url: null
+        verification_status: verificationStatus,
+        verification_message: verificationMessage,
+        blockchain_verified: blockchainVerified,
+        explorer_url: explorerUrl,
+        digital_evidence_status: digitalEvidenceStatus
       };
-
-      // Check Digital Evidence API status if we have a fingerprint hash
-      if (record.blockchain_tx_id && record.blockchain_status === 'submitted') {
-        try {
-          const statusResult = await digitalEvidenceClient.checkFingerprintStatus(record.blockchain_tx_id);
-
-          if (statusResult.status === 'FINALIZED_COMMITMENT') {
-            verificationData.verification_status = 'verified';
-            verificationData.verification_message = 'Evidence verified on Constellation Digital Evidence API';
-            verificationData.blockchain_verified = true;
-          } else if (statusResult.status === 'PENDING') {
-            verificationData.verification_status = 'pending';
-            verificationData.verification_message = 'Evidence submitted, awaiting consensus finalization';
-            verificationData.blockchain_verified = false;
-          } else {
-            verificationData.verification_status = 'error';
-            verificationData.verification_message = statusResult.error || 'Unknown status';
-            verificationData.blockchain_verified = false;
-          }
-
-          verificationData.explorer_url = statusResult.explorerUrl;
-          verificationData.digital_evidence_status = statusResult.status;
-
-        } catch (statusError) {
-          console.error('Error checking Digital Evidence status:', statusError);
-          verificationData.verification_status = 'error';
-          verificationData.verification_message = 'Could not verify Digital Evidence status';
-          verificationData.blockchain_verified = false;
-        }
-      }
 
       res.status(200).json({
         success: true,
