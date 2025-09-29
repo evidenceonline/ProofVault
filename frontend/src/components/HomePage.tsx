@@ -262,7 +262,7 @@ export default function HomePage() {
           }
         } else if (data.verification_status === 'verified') {
           status = 'FINALIZED_COMMITMENT';
-        } else if (data.verification_status === 'pending') {
+        } else if (data.verification_status === 'submitted' || data.verification_status === 'pending') {
           status = 'PENDING_COMMITMENT';
         } else {
           status = 'ERROR';
@@ -371,7 +371,7 @@ export default function HomePage() {
         case 'FINALIZED_COMMITMENT':
           return { text: 'Verified', icon: '✅', color: 'var(--color-success-600)', bgColor: 'var(--color-success-50)' };
         case 'PENDING_COMMITMENT':
-          return { text: 'Pending', icon: '⏳', color: 'var(--color-warning-600)', bgColor: 'var(--color-warning-50)' };
+          return { text: 'Submitted', icon: '⏳', color: 'var(--color-warning-600)', bgColor: 'var(--color-warning-50)' };
         case 'PROCESSING':
           return { text: 'Processing', icon: '⚙️', color: 'var(--color-info-600)', bgColor: 'var(--color-info-50)' };
         case 'QUEUED':
@@ -389,6 +389,54 @@ export default function HomePage() {
     };
 
     return getStatusInfo(status.status);
+  };
+
+  const renderBlockchainStatusBadge = (status?: string) => {
+    const normalizedStatus = status ?? 'pending';
+
+    const statusMap: Record<string, { label: string; icon: string; color: string; bg: string; aria: string }> = {
+      verified: {
+        label: 'Verified',
+        icon: '✅',
+        color: 'var(--color-success-600)',
+        bg: 'var(--color-success-50)',
+        aria: 'Blockchain verified'
+      },
+      submitted: {
+        label: 'Submitted',
+        icon: '⏳',
+        color: 'var(--color-warning-600)',
+        bg: 'var(--color-warning-50)',
+        aria: 'Blockchain submission awaiting finalization'
+      },
+      failed: {
+        label: 'Failed',
+        icon: '❌',
+        color: 'var(--color-error-600)',
+        bg: 'var(--color-error-50)',
+        aria: 'Blockchain submission failed'
+      },
+      pending: {
+        label: 'Pending',
+        icon: '⏳',
+        color: 'var(--color-neutral-600)',
+        bg: 'var(--color-neutral-50)',
+        aria: 'Blockchain submission pending'
+      }
+    };
+
+    const config = statusMap[normalizedStatus] ?? statusMap.pending;
+
+    return (
+      <span
+        className="status-badge"
+        style={{ color: config.color, backgroundColor: config.bg }}
+        role="img"
+        aria-label={config.aria}
+      >
+        <span aria-hidden="true">{config.icon}</span> {config.label}
+      </span>
+    );
   };
 
   // Clear modal data and digital evidence status
@@ -604,19 +652,7 @@ export default function HomePage() {
                       <div className="card-header">
                         <div className="card-title">
                           <span className="company-name">{record.company_name}</span>
-                          {record.blockchain_status === 'submitted' ? (
-                            <span className="status-badge" style={{ color: 'var(--color-success-600)', backgroundColor: 'var(--color-success-50)' }} role="img" aria-label="Blockchain submitted">
-                              <span aria-hidden="true">✅</span> Submitted
-                            </span>
-                          ) : record.blockchain_status === 'failed' ? (
-                            <span className="status-badge" style={{ color: 'var(--color-error-600)', backgroundColor: 'var(--color-error-50)' }} role="img" aria-label="Blockchain failed">
-                              <span aria-hidden="true">❌</span> Failed
-                            </span>
-                          ) : (
-                            <span className="status-badge" style={{ color: 'var(--color-neutral-600)', backgroundColor: 'var(--color-neutral-50)' }} role="img" aria-label="Blockchain pending">
-                              <span aria-hidden="true">⏳</span> Pending
-                            </span>
-                          )}
+                          {renderBlockchainStatusBadge(record.blockchain_status)}
                         </div>
                         <div className="card-date">
                           <time dateTime={record.created_at}>
@@ -773,19 +809,7 @@ export default function HomePage() {
                         </time>
                       </td>
                       <td role="gridcell">
-                        {record.blockchain_status === 'submitted' ? (
-                          <span className="status-badge" style={{ color: 'var(--color-success-600)', backgroundColor: 'var(--color-success-50)' }} role="img" aria-label="Blockchain submitted">
-                            <span aria-hidden="true">✅</span> Submitted
-                          </span>
-                        ) : record.blockchain_status === 'failed' ? (
-                          <span className="status-badge" style={{ color: 'var(--color-error-600)', backgroundColor: 'var(--color-error-50)' }} role="img" aria-label="Blockchain failed">
-                            <span aria-hidden="true">❌</span> Failed
-                          </span>
-                        ) : (
-                          <span className="status-badge" style={{ color: 'var(--color-neutral-600)', backgroundColor: 'var(--color-neutral-50)' }} role="img" aria-label="Blockchain pending">
-                            <span aria-hidden="true">⏳</span> Pending
-                          </span>
-                        )}
+                        {renderBlockchainStatusBadge(record.blockchain_status)}
                       </td>
                       <td role="gridcell">
                         <div className="action-buttons" role="group" aria-label={`Actions for evidence ${record.id}`}>
