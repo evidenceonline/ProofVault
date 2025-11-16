@@ -1,0 +1,151 @@
+package io.proofvault.data_l1
+
+import cats.data.NonEmptyList
+import cats.effect.{IO, Resource, Ref}
+import cats.syntax.all._
+import io.circe.{Decoder, Encoder, Json}
+import io.circe.syntax._
+import org.http4s._
+import org.http4s.circe._
+import org.http4s.dsl.Http4sDsl
+import org.tessellation.BuildInfo
+import org.tessellation.currency.dataApplication._
+import org.tessellation.currency.dataApplication.dataApplication._
+import org.tessellation.currency.l1.CurrencyL1App
+import org.tessellation.schema.SnapshotOrdinal
+import org.tessellation.schema.cluster.ClusterId
+import org.tessellation.schema.semver.{MetagraphVersion, TessellationVersion}
+import org.tessellation.security.hash.Hash
+import org.tessellation.security.signature.Signed
+
+import java.util.UUID
+
+import io.proofvault.shared_data.errors.Errors.valid
+import io.proofvault.shared_data.model.TextUpdate
+
+/* ─────── Estados vacíos como en el NFT ─────── */
+case object EmptyOnChainState    extends DataOnChainState
+case object EmptyCalculatedState extends DataCalculatedState
+
+/* ───────────────────── Nodo L1 ───────────────────── */
+object Main
+    extends CurrencyL1App(
+      "proofvault-data_l1",
+      "ProofVault data L1 node",
+      ClusterId(UUID.fromString("517c3a05-9219-471b-a54c-21b7d72f4ae5")),
+      TessellationVersion.unsafeFrom(BuildInfo.version),
+      MetagraphVersion.unsafeFrom(BuildInfo.version)
+    ) {
+
+  /* ─────────── Data-application (patrón NFT) ─────────── */
+  private def makeTextService(repo: Repo[IO], calculatedStateRef: Ref[IO, (SnapshotOrdinal, EmptyCalculatedState.type)]) = new DataApplicationL1Service[
+    IO,
+    TextUpdate,
+    EmptyOnChainState.type,
+    EmptyCalculatedState.type
+  ] {
+
+    /* ----- validaciones vacías ----- */
+    def validateData(
+        s: DataState[EmptyOnChainState.type, EmptyCalculatedState.type],
+        u: NonEmptyList[Signed[TextUpdate]]
+    )(implicit ctx: L1NodeContext[IO]) = valid.pure[IO]
+
+    def validateUpdate(
+        u: TextUpdate
+    )(implicit ctx: L1NodeContext[IO]) = valid.pure[IO]
+
+    /* ----- combine sin estado ----- */
+    def combine(
+        s: DataState[EmptyOnChainState.type, EmptyCalculatedState.type],
+        u: List[Signed[TextUpdate]]
+    )(implicit ctx: L1NodeContext[IO]) = s.pure[IO]
+
+    /* ----- apply: guarda en el repo ----- */
+    def applyUpdates(
+        s: DataState[EmptyOnChainState.type, EmptyCalculatedState.type],
+        u: NonEmptyList[Signed[TextUpdate]]
+    )(implicit ctx: L1NodeContext[IO]) =
+      u.toList.traverse_(x => repo.put(x.value))
+
+    /* ----- rutas para consultar datos almacenados ----- */
+    def routes(implicit ctx: L1NodeContext[IO]) = {
+      val dsl = new Http4sDsl[IO] {}; import dsl._
+      import org.http4s.server.middleware.CORS
+      
+      val customRoutes = HttpRoutes.of[IO] {
+        case GET -> Root / "text" / id =>
+          repo.get(id).flatMap {
+            case Some(tu) => Ok(tu.asJson)
+            case None     => NotFound()
+          }
+      }
+      
+      // Apply CORS middleware like in the working examples
+      CORS.policy
+        .withAllowCredentials(false)
+        .httpRoutes(customRoutes)
+    }
+
+    /* ----- serialización vacía ----- */
+    def serializeState(s: EmptyOnChainState.type)              = IO.pure(Array.emptyByteArray)
+    def deserializeState(b: Array[Byte])                       = IO.pure(Right(EmptyOnChainState))
+    def serializeCalculatedState(s: EmptyCalculatedState.type) = IO.pure(Array.emptyByteArray)
+    def deserializeCalculatedState(b: Array[Byte])             = IO.pure(Right(EmptyCalculatedState))
+    def serializeUpdate(u: TextUpdate) = IO {
+      // Critical: Use Constellation's data signing format
+      val encoder = java.util.Base64.getEncoder
+      val data_sign_prefix = "\u0019Constellation Signed Data:\n"
+      
+      val updateBytes = u.asJson.deepDropNullValues.noSpaces.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+      val encodedBytes = encoder.encode(updateBytes)
+      
+      val encodedString = new String(encodedBytes, "UTF-8")
+      val completeString = s"$data_sign_prefix${encodedString.length}\n$encodedString"
+      
+      completeString.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+    }
+    def deserializeUpdate(b: Array[Byte])                      = IO.pure(Right(TextUpdate("", "")))
+    def serializeBlock(b: Signed[DataApplicationBlock])        = IO.pure(Array.emptyByteArray)
+    def deserializeBlock(b: Array[Byte]) =
+      IO.pure(Left(new UnsupportedOperationException("not used")))
+
+    /* ----- calculated-state vacíos ----- */
+    def getCalculatedState(implicit ctx: L1NodeContext[IO]) =
+      calculatedStateRef.get
+
+    def setCalculatedState(
+        o: SnapshotOrdinal,
+        s: EmptyCalculatedState.type
+    )(implicit ctx: L1NodeContext[IO]) = 
+      calculatedStateRef.set((o, s)).as(true)
+
+    def hashCalculatedState(
+        s: EmptyCalculatedState.type
+    )(implicit ctx: L1NodeContext[IO]) = IO.pure(Hash("0" * 64))
+
+    /* ----- encoders/decoders ----- */
+    implicit val emptyOnChainEnc: Encoder[EmptyOnChainState.type]    = _ => Json.obj()
+    implicit val emptyOnChainDec: Decoder[EmptyOnChainState.type]    = _ => Right(EmptyOnChainState)
+    implicit val emptyCalcEnc:    Encoder[EmptyCalculatedState.type] = _ => Json.obj()
+    implicit val emptyCalcDec:    Decoder[EmptyCalculatedState.type] = _ => Right(EmptyCalculatedState)
+
+    def dataEncoder            = implicitly[Encoder[TextUpdate]]
+    def dataDecoder            = implicitly[Decoder[TextUpdate]]
+    def calculatedStateEncoder = emptyCalcEnc
+    def calculatedStateDecoder = emptyCalcDec
+
+    /* ----- firmado ----- */
+    def signedDataEntityDecoder: EntityDecoder[IO, Signed[TextUpdate]] =
+      jsonOf[IO, Signed[TextUpdate]]
+  }
+
+  /* Registro en el nodo */
+  override val dataApplication: Option[Resource[IO, BaseDataApplicationL1Service[IO]]] =
+    Some(for {
+      repo <- Resource.eval(InMemoryRepo.create[IO])
+      calculatedStateRef <- Resource.eval(Ref.of[IO, (SnapshotOrdinal, EmptyCalculatedState.type)]((SnapshotOrdinal.MinValue, EmptyCalculatedState)))
+      textService = makeTextService(repo, calculatedStateRef)
+      textApp = BaseDataApplicationL1Service(textService)
+    } yield textApp)
+}
