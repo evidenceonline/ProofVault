@@ -12,7 +12,7 @@ services:
     environment:
       POSTGRES_DB: proofvaultdb_test
       POSTGRES_USER: proofvaultuser
-      POSTGRES_PASSWORD: ProofV@ult2024_Docker
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_secure_password_here}
     ports:
       - "5433:5432"  # Use 5433 to avoid conflicts with local PostgreSQL
     volumes:
@@ -40,16 +40,16 @@ services:
       DB_PORT: 5432
       DB_NAME: proofvaultdb_test
       DB_USER: proofvaultuser
-      DB_PASSWORD: ProofV@ult2024_Docker
-      JWT_SECRET: docker_dev_jwt_secret
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-your_secure_password_here}
+      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_here}
       JWT_EXPIRES_IN: 7d
       MAX_FILE_SIZE: 10485760
       ALLOWED_FILE_TYPES: application/pdf
       LOG_LEVEL: info
       ALLOWED_ORIGINS: http://localhost:4002,http://localhost:3000
-      DE_API_KEY: pk_live_SG04JS_igyhyvbgsarg673wamj1y4srnct286j6ufs0
-      DE_ORGANIZATION_ID: a7972dad-c0e3-414c-b29b-576bb94dbe80
-      DE_TENANT_ID: cd15e581-06b1-416b-8214-755b88856f32
+      DE_API_KEY: ${DE_API_KEY:-your_digital_evidence_api_key_here}
+      DE_ORGANIZATION_ID: ${DE_ORGANIZATION_ID:-your_organization_id_here}
+      DE_TENANT_ID: ${DE_TENANT_ID:-your_tenant_id_here}
     ports:
       - "4000:4000"
     depends_on:

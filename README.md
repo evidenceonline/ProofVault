@@ -68,7 +68,11 @@ git clone https://github.com/evidenceonline/ProofVault.git
 cd ProofVault
 git checkout digital-evidence
 
-# 2. Start everything with one command
+# 2. Configure credentials
+cp .env.docker.example .env.docker
+# Edit .env.docker and add your credentials
+
+# 3. Start everything with one command
 docker-compose -f docker-compose.dev.yml up
 ```
 
