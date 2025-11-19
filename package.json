@@ -1,8 +1,43 @@
 {
+  "name": "proofvault",
+  "version": "1.0.0",
+  "description": "Blockchain-powered digital notary that transforms web content into tamper-proof legal evidence",
+  "scripts": {
+    "setup": "./setup.sh",
+    "install:all": "npm install && cd api && npm install && cd ../frontend && npm install",
+    "dev": "npm run dev:api & npm run dev:frontend",
+    "dev:api": "cd api && npm start",
+    "dev:frontend": "cd frontend && npm run dev",
+    "start": "npm run dev",
+    "build": "cd frontend && npm run build",
+    "test": "cd api && npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/evidenceonline/ProofVault.git"
+  },
+  "keywords": [
+    "blockchain",
+    "digital-evidence",
+    "constellation-network",
+    "legal",
+    "notary",
+    "pdf",
+    "evidence"
+  ],
+  "author": "ProofVault Team",
+  "license": "Apache-2.0",
   "dependencies": {
     "axios": "^1.11.0",
     "canvas": "^3.1.2",
     "form-data": "^4.0.4",
     "pdfkit": "^0.17.1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   }
 }
