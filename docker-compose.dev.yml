@@ -47,6 +47,9 @@ services:
       ALLOWED_FILE_TYPES: application/pdf
       LOG_LEVEL: info
       ALLOWED_ORIGINS: http://localhost:4002,http://localhost:3000
+      DE_API_KEY: ${DE_API_KEY:-your_digital_evidence_api_key_here}
+      DE_ORGANIZATION_ID: ${DE_ORGANIZATION_ID:-your_organization_id_here}
+      DE_TENANT_ID: ${DE_TENANT_ID:-your_tenant_id_here}
     ports:
       - "4000:4000"
     depends_on:
