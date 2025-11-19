@@ -56,15 +56,44 @@ ProofVault provides a complete chain of custody for digital evidence through:
 
 ## 🚀 Quick Start
 
-> **New!** We now have an automated setup script! See below for the fastest way to get started.
+> **New!** Docker setup with ZERO configuration! Or use our automated setup script for native installation.
 
-### Prerequisites
+### Option 1: Docker Setup (Fastest - ZERO Config! 🐳)
+
+**No Node.js, no PostgreSQL install needed!** Just Docker.
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/evidenceonline/ProofVault.git
+cd ProofVault
+git checkout digital-evidence
+
+# 2. Start everything with one command
+docker-compose -f docker-compose.dev.yml up
+```
+
+**That's it!** Your application is running at:
+- **Frontend Dashboard**: http://localhost:4002
+- **API Server**: http://localhost:4000
+
+**What this does automatically:**
+- ✅ Creates PostgreSQL database
+- ✅ Initializes database schema
+- ✅ Installs all dependencies
+- ✅ Starts API server
+- ✅ Starts frontend dashboard
+
+**Prerequisites:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed
+
+---
+
+### Option 2: Automated Setup (Recommended for Native Install ⚡)
+
+**Prerequisites:**
 - **Node.js** 18+ ([Download](https://nodejs.org/))
 - **PostgreSQL** 13+ ([Download](https://www.postgresql.org/download/))
 - **Chrome Browser** (for extension)
 - **Constellation Digital Evidence API Account** (optional - get it at [digitalevidence.constellationnetwork.io](https://digitalevidence.constellationnetwork.io/))
-
-### Option 1: Automated Setup (Recommended ⚡)
 
 The fastest way to get ProofVault running:
 
@@ -102,7 +131,7 @@ That's it! Your application is running at:
 
 ---
 
-### Option 2: Manual Setup
+### Option 3: Manual Setup
 
 If you prefer manual setup or need more control:
 
@@ -163,23 +192,6 @@ If you prefer manual setup or need more control:
    - Navigate to `chrome://extensions/`
    - Enable "Developer mode"
    - Click "Load unpacked" and select `chrome-extension/` directory
-
----
-
-### Option 3: Docker Setup (Coming Soon)
-
-For the ultimate one-command experience:
-
-```bash
-docker-compose up
-```
-
-This will start:
-- PostgreSQL database
-- API server
-- Frontend dashboard
-
-All configured and ready to use!
 
 ## 🏗️ Architecture
 
