@@ -1,0 +1,97 @@
+# ProofVault Development Docker Compose
+# For quick testing and development with hot reload
+# Usage: docker-compose -f docker-compose.dev.yml up
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: proofvault-db-dev
+    environment:
+      POSTGRES_DB: proofvaultdb_test
+      POSTGRES_USER: proofvaultuser
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_secure_password_here}
+    ports:
+      - "5433:5432"  # Use 5433 to avoid conflicts with local PostgreSQL
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./setup_proofvaultdb_test.sql:/docker-entrypoint-initdb.d/01-setup.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U proofvaultuser -d proofvaultdb_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - proofvault-network
+
+  # API Server (Development Mode with hot reload)
+  api:
+    image: node:18-alpine
+    container_name: proofvault-api-dev
+    working_dir: /app
+    command: sh -c "npm install && npm start"
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      HOST: 0.0.0.0
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: proofvaultdb_test
+      DB_USER: proofvaultuser
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-your_secure_password_here}
+      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_here}
+      JWT_EXPIRES_IN: 7d
+      MAX_FILE_SIZE: 10485760
+      ALLOWED_FILE_TYPES: application/pdf
+      LOG_LEVEL: info
+      ALLOWED_ORIGINS: http://localhost:4002,http://localhost:3000
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./api:/app
+      - api_node_modules:/app/node_modules
+    networks:
+      - proofvault-network
+    restart: unless-stopped
+
+  # Frontend Dashboard (Development Mode with hot reload)
+  frontend:
+    image: node:18-alpine
+    container_name: proofvault-frontend-dev
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:4000/api
+      NEXT_PUBLIC_APP_NAME: ProofVault
+      NEXT_PUBLIC_APP_DESCRIPTION: Legal Evidence Management System
+      PORT: 4002
+    ports:
+      - "4002:4002"
+    depends_on:
+      - api
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+      - frontend_next:/app/.next
+    networks:
+      - proofvault-network
+    restart: unless-stopped
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  api_node_modules:
+    driver: local
+  frontend_node_modules:
+    driver: local
+  frontend_next:
+    driver: local
+
+networks:
+  proofvault-network:
+    driver: bridge

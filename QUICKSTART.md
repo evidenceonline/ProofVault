@@ -19,7 +19,57 @@ psql --version   # Should show 13 or higher
 
 ---
 
-## Option 1: Automated Setup (Recommended)
+## Option 1: Docker Setup (Fastest - ZERO Prerequisites! 🐳)
+
+**The absolute fastest way** - No Node.js, no PostgreSQL install needed!
+
+### Prerequisites
+- **Docker Desktop** ([Download](https://www.docker.com/products/docker-desktop/))
+
+### Setup Steps
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/evidenceonline/ProofVault.git
+cd ProofVault
+git checkout digital-evidence
+
+# 2. Start everything with Docker
+docker-compose -f docker-compose.dev.yml up
+```
+
+**That's literally it!** 🎉
+
+Your application is now running:
+- **Frontend Dashboard**: http://localhost:4002
+- **API Server**: http://localhost:4000
+
+### What Happens Automatically
+
+- ✅ PostgreSQL database created and initialized
+- ✅ Database schema loaded
+- ✅ API dependencies installed
+- ✅ Frontend dependencies installed
+- ✅ Both services started with hot reload
+
+### Stop the Application
+
+```bash
+# Press Ctrl+C in the terminal
+# Or run:
+docker-compose -f docker-compose.dev.yml down
+```
+
+### Clean Up (Optional)
+
+```bash
+# Remove all containers and volumes
+docker-compose -f docker-compose.dev.yml down -v
+```
+
+---
+
+## Option 2: Automated Setup (Recommended for Native Install)
 
 The easiest way to get started:
 
@@ -57,7 +107,7 @@ That's it! Your application is running:
 
 ---
 
-## Option 2: Manual Setup
+## Option 3: Manual Setup
 
 If you prefer to set things up manually:
 
@@ -108,16 +158,6 @@ cd api && npm start
 
 # Terminal 2: Start Frontend
 cd frontend && npm run dev
-```
-
----
-
-## Option 3: Docker Setup (Coming Soon)
-
-For the ultimate one-command setup:
-
-```bash
-docker-compose up
 ```
 
 ---
