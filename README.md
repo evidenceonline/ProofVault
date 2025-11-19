@@ -56,13 +56,17 @@ ProofVault provides a complete chain of custody for digital evidence through:
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- **Node.js** 18+
-- **PostgreSQL** 13+
-- **Chrome Browser**
-- **Constellation Digital Evidence API Account** (for blockchain integration)
+> **New!** We now have an automated setup script! See below for the fastest way to get started.
 
-### Installation
+### Prerequisites
+- **Node.js** 18+ ([Download](https://nodejs.org/))
+- **PostgreSQL** 13+ ([Download](https://www.postgresql.org/download/))
+- **Chrome Browser** (for extension)
+- **Constellation Digital Evidence API Account** (optional - get it at [digitalevidence.constellationnetwork.io](https://digitalevidence.constellationnetwork.io/))
+
+### Option 1: Automated Setup (Recommended ⚡)
+
+The fastest way to get ProofVault running:
 
 1. **Clone the repository**
    ```bash
@@ -71,46 +75,111 @@ ProofVault provides a complete chain of custody for digital evidence through:
    git checkout digital-evidence
    ```
 
-2. **Install dependencies**
+2. **Run the automated setup**
    ```bash
-   # Install API dependencies
-   cd api && npm install
-
-   # Install frontend dependencies
-   cd ../frontend && npm install
+   chmod +x setup.sh
+   ./setup.sh
    ```
 
-3. **Configure Digital Evidence API**
+   The setup script will:
+   - ✅ Verify all prerequisites
+   - ✅ Install all dependencies (API + Frontend)
+   - ✅ Create PostgreSQL database and user
+   - ✅ Generate configuration files
+   - ✅ Set up environment variables
+   - ✅ Validate the installation
+
+3. **Start the application**
+   ```bash
+   npm run dev
+   ```
+
+That's it! Your application is running at:
+- **Frontend Dashboard**: http://localhost:4002
+- **API Server**: http://localhost:4000
+
+📘 For more detailed instructions, see [QUICKSTART.md](QUICKSTART.md)
+
+---
+
+### Option 2: Manual Setup
+
+If you prefer manual setup or need more control:
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/evidenceonline/ProofVault.git
+   cd ProofVault
+   git checkout digital-evidence
+   ```
+
+2. **Install all dependencies**
+   ```bash
+   npm run install:all
+   ```
+
+3. **Set up PostgreSQL database**
+   ```bash
+   # Create database user
+   sudo -u postgres psql -c "CREATE USER proofvaultuser WITH PASSWORD 'your_password';"
+
+   # Create database
+   sudo -u postgres psql -c "CREATE DATABASE proofvaultdb_test WITH OWNER proofvaultuser;"
+
+   # Grant permissions
+   sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE proofvaultdb_test TO proofvaultuser;"
+
+   # Run setup script (copy to /tmp to avoid permission issues)
+   cp setup_proofvaultdb_test.sql /tmp/
+   sudo -u postgres psql -d proofvaultdb_test -f /tmp/setup_proofvaultdb_test.sql
+   ```
+
+4. **Configure API environment**
    ```bash
    # Copy environment template
    cp api/.env.example api/.env
 
-   # Edit .env file with your Digital Evidence API credentials:
-   # DE_API_KEY=your_api_key
-   # DE_ORGANIZATION_ID=your_org_id
-   # DE_TENANT_ID=your_tenant_id
-   ```
-
-4. **Set up PostgreSQL database**
-   ```bash
-   # Create database and run setup script
-   psql -U postgres -c "CREATE DATABASE proofvaultdb_test;"
-   psql -U postgres -d proofvaultdb_test -f setup_proofvaultdb_test.sql
+   # Edit api/.env and update:
+   # - DB_PASSWORD=your_password
+   # - DE_API_KEY=your_api_key (optional)
+   # - DE_ORGANIZATION_ID=your_org_id (optional)
+   # - DE_TENANT_ID=your_tenant_id (optional)
    ```
 
 5. **Start the application**
    ```bash
-   # Start API server (from api directory)
+   # Option A: Start both services at once
+   npm run dev
+
+   # Option B: Start services separately (two terminals)
+   # Terminal 1:
    cd api && npm start
 
-   # Start frontend (from frontend directory, new terminal)
-   cd frontend && npm start
+   # Terminal 2:
+   cd frontend && npm run dev
    ```
 
 6. **Load Chrome extension**
    - Navigate to `chrome://extensions/`
    - Enable "Developer mode"
    - Click "Load unpacked" and select `chrome-extension/` directory
+
+---
+
+### Option 3: Docker Setup (Coming Soon)
+
+For the ultimate one-command experience:
+
+```bash
+docker-compose up
+```
+
+This will start:
+- PostgreSQL database
+- API server
+- Frontend dashboard
+
+All configured and ready to use!
 
 ## 🏗️ Architecture
 
