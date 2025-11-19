@@ -34,11 +34,18 @@ git clone https://github.com/evidenceonline/ProofVault.git
 cd ProofVault
 git checkout digital-evidence
 
-# 2. Start everything with Docker
+# 2. Configure credentials
+cp .env.docker.example .env.docker
+# Edit .env.docker and add your credentials:
+# - Set POSTGRES_PASSWORD
+# - Set JWT_SECRET
+# - Add Digital Evidence API credentials (optional)
+
+# 3. Start everything with Docker
 docker-compose -f docker-compose.dev.yml up
 ```
 
-**That's literally it!** 🎉
+**That's it!** 🎉
 
 Your application is now running:
 - **Frontend Dashboard**: http://localhost:4002
