@@ -47,6 +47,9 @@ services:
       ALLOWED_FILE_TYPES: application/pdf
       LOG_LEVEL: info
       ALLOWED_ORIGINS: http://localhost:4002,http://localhost:3000
+      DE_API_KEY: pk_live_SG04JS_igyhyvbgsarg673wamj1y4srnct286j6ufs0
+      DE_ORGANIZATION_ID: a7972dad-c0e3-414c-b29b-576bb94dbe80
+      DE_TENANT_ID: cd15e581-06b1-416b-8214-755b88856f32
     ports:
       - "4000:4000"
     depends_on:
