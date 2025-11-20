@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 [![Constellation Network](https://img.shields.io/badge/Built%20on-Constellation%20Network-purple.svg)](https://constellationnetwork.io/)
-[![Status](https://img.shields.io/badge/Status-In%20Development-yellow.svg)](#)
+[![Status](https://img.shields.io/badge/Status-Beta-blue.svg)](#)
 
 **Blockchain-powered digital notary that transforms web content into tamper-proof legal evidence**
 
@@ -66,14 +66,15 @@ ProofVault provides a complete chain of custody for digital evidence through:
 # 1. Clone the repository
 git clone https://github.com/evidenceonline/ProofVault.git
 cd ProofVault
-git checkout digital-evidence
+git checkout feature/automated-setup-and-improvements
 
 # 2. Configure credentials
 cp .env.docker.example .env.docker
-# Edit .env.docker and add your credentials
+# Edit .env.docker with your database password and JWT secret
+# Digital Evidence API credentials are OPTIONAL (see .env.docker.example for details)
 
 # 3. Start everything with one command
-docker-compose -f docker-compose.dev.yml up
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 **That's it!** Your application is running at:
@@ -88,6 +89,24 @@ docker-compose -f docker-compose.dev.yml up
 - ✅ Starts frontend dashboard
 
 **Prerequisites:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed
+
+**Useful Docker Commands:**
+```bash
+# View logs from all services
+docker compose -f docker-compose.dev.yml logs -f
+
+# Stop all services
+docker compose -f docker-compose.dev.yml down
+
+# Stop and remove all data (fresh start)
+docker compose -f docker-compose.dev.yml down -v
+
+# Restart services
+docker compose -f docker-compose.dev.yml restart
+
+# Check service status
+docker compose -f docker-compose.dev.yml ps
+```
 
 ---
 
@@ -105,7 +124,7 @@ The fastest way to get ProofVault running:
    ```bash
    git clone https://github.com/evidenceonline/ProofVault.git
    cd ProofVault
-   git checkout digital-evidence
+   git checkout feature/automated-setup-and-improvements
    ```
 
 2. **Run the automated setup**
@@ -143,7 +162,7 @@ If you prefer manual setup or need more control:
    ```bash
    git clone https://github.com/evidenceonline/ProofVault.git
    cd ProofVault
-   git checkout digital-evidence
+   git checkout feature/automated-setup-and-improvements
    ```
 
 2. **Install all dependencies**
@@ -215,16 +234,17 @@ graph TB
 ### Component Structure
 ```
 ProofVault/
-├── api/                # Node.js API server with Digital Evidence integration
-├── chrome-extension/   # Browser extension for PDF capture
-├── frontend/           # Next.js dashboard interface
-├── proofvault-client/  # Blockchain client utilities (deprecated)
-├── business-site/      # Marketing website
-├── web/               # Additional web components
-├── DOCUMENTATION.md   # Complete technical documentation
+├── api/                     # Node.js API server with Digital Evidence integration
+├── chrome-extension/        # Browser extension for PDF capture
+├── frontend/                # Next.js dashboard interface
+├── business-site/           # Marketing website
+├── web/                     # Additional web components
+├── docker-compose.dev.yml   # Docker development configuration
+├── docker-compose.yml       # Docker production configuration
+├── DOCUMENTATION.md         # Complete technical documentation
 ├── setup_proofvaultdb_test.sql  # Database setup script
-├── ecosystem.config.js # PM2 process management
-└── package.json       # Root dependencies
+├── setup.sh                 # Automated setup script
+└── package.json             # Root dependencies
 ```
 
 ### Integration Layers
@@ -248,19 +268,21 @@ ProofVault/
 ### Available Scripts
 
 ```bash
-# Start API server
+# Start API server (production mode)
 cd api && npm start
 
-# Start frontend dashboard
-cd frontend && npm start
-
-# Run development mode with auto-reload
-cd api && npm run dev
+# Start frontend dashboard (development mode with hot reload)
 cd frontend && npm run dev
+
+# Run API in development mode with auto-reload
+cd api && npm run dev
 
 # Install dependencies
 cd api && npm install
 cd frontend && npm install
+
+# Run both services together (from root directory)
+npm run dev
 ```
 
 ## 🌐 Network Information
@@ -277,6 +299,66 @@ cd frontend && npm install
 4. **Status Tracking**: Real-time verification status updates
 5. **Public Verification**: Access verification certificates via blockchain explorer
 
+## 🔧 Troubleshooting
+
+### Common Issues and Solutions
+
+#### Port Already in Use
+If you see "port 4000 already in use" or "port 4002 already in use":
+```bash
+# Find what's using the port
+lsof -i :4000
+lsof -i :4002
+
+# Kill the process or change ports in docker-compose.dev.yml
+```
+
+#### Database Connection Errors
+If the API can't connect to the database:
+```bash
+# Check database container is running
+docker compose -f docker-compose.dev.yml ps
+
+# View database logs
+docker compose -f docker-compose.dev.yml logs postgres
+
+# Restart database
+docker compose -f docker-compose.dev.yml restart postgres
+```
+
+#### Docker Not Starting
+```bash
+# Make sure Docker Desktop is running
+docker --version
+
+# Clean up and restart
+docker compose -f docker-compose.dev.yml down -v
+docker compose -f docker-compose.dev.yml up -d
+```
+
+#### Environment Variables Not Loading
+```bash
+# Verify .env.docker exists and has correct values
+cat .env.docker
+
+# Make sure you're using --env-file flag
+docker compose -f docker-compose.dev.yml --env-file .env.docker up -d
+```
+
+#### Permission Denied (setup.sh)
+```bash
+# Make the setup script executable
+chmod +x setup.sh
+./setup.sh
+```
+
+### Getting Help
+- **GitHub Issues**: [Report bugs or request features](https://github.com/evidenceonline/ProofVault/issues)
+- **Documentation**: Check [DOCUMENTATION.md](DOCUMENTATION.md) for detailed guides
+- **Digital Evidence API**: Visit [digitalevidence.constellationnetwork.io](https://digitalevidence.constellationnetwork.io/)
+
+---
+
 ## 📚 Documentation
 
 - **[Complete Documentation](DOCUMENTATION.md)** - Comprehensive system documentation including:
@@ -285,7 +367,7 @@ cd frontend && npm install
   - Legal framework and court admissibility
   - API reference and usage instructions
   - Blockchain integration details
-  - Troubleshooting guide
+  - Advanced troubleshooting
 
 ## 🔒 Security Model
 
