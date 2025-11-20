@@ -218,54 +218,14 @@ If you prefer manual setup or need more control:
 
 ## 🏗️ Architecture
 
-### System Flow
-```mermaid
-graph TB
-    A[Chrome Extension] -->|1. Upload PDF| B[Backend API]
-    B -->|2. Compute SHA-256 Hash| B
-    B -->|3. Store PDF + Hash| C[(PostgreSQL Database)]
-    B -->|4. Submit Fingerprint| D[Digital Evidence API]
-    D -->|5. Record on Blockchain| E[Constellation Network]
-    F[Frontend Dashboard] -->|View/Search| B
-    B -->|Read Records| C
-    F -->|Verify Status| B
-    B -->|Query Status| D
+ProofVault combines a Chrome extension, backend API, PostgreSQL database, and blockchain integration to create tamper-proof digital evidence:
 
-    style A fill:#e1f5ff
-    style B fill:#fff4e1
-    style C fill:#f0f0f0
-    style D fill:#e8f5e9
-    style E fill:#f3e5f5
-    style F fill:#ffe0e0
-```
+- **Chrome Extension** → Captures webpages as PDFs and uploads to backend
+- **Backend API** → Computes SHA-256 hashes (server-side for security) and submits to blockchain
+- **PostgreSQL Database** → Stores PDF files, hashes, and metadata
+- **Constellation Network** → Records cryptographic fingerprints with immutable timestamps
 
-### How It Works
-
-**Upload Workflow (Chrome Extension → Blockchain):**
-1. **Chrome Extension** captures webpage and generates PDF locally using Chrome's print API
-2. **Backend API** receives the raw PDF file (extension does NOT compute hash)
-3. **Backend API** computes SHA-256 hash of the PDF content (server-side for security)
-4. **PostgreSQL Database** stores the PDF binary, hash, and metadata
-5. **Digital Evidence API** receives the hash as a fingerprint submission
-6. **Constellation Network** records the fingerprint on the blockchain with immutable timestamp
-
-**View Workflow (Frontend Dashboard → Data):**
-- **Frontend Dashboard** fetches records from Backend API (list, search, filter)
-- **Backend API** reads data from PostgreSQL Database
-- Users can view details, download PDFs, and verify blockchain status
-- **Note:** Frontend is view-only - no upload capability (uploads only via Chrome Extension)
-
-**Verification Workflow (Check Blockchain Status):**
-- User clicks "View Details" or "Verify" in Frontend Dashboard
-- **Backend API** queries Digital Evidence API for current fingerprint status
-- Status can be: PENDING, FINALIZED_COMMITMENT, or ERROR
-- Provides link to Constellation Network's Digital Evidence Explorer
-
-**Key Security Features:**
-- 🔒 Hash computation controlled by backend (prevents client-side tampering)
-- 🔒 Digital Evidence API submission is fail-safe (upload succeeds even if blockchain fails)
-- 🔒 Duplicate detection via hash comparison in database
-- 🔒 ECDSA signatures (secp256k1) for blockchain submissions
+**📖 For detailed architecture diagrams, data flows, and technical implementation, see [DOCUMENTATION.md - System Architecture](DOCUMENTATION.md#2-system-architecture)**
 
 ### Component Structure
 ```
@@ -337,87 +297,61 @@ npm run dev
 
 ## 🔧 Troubleshooting
 
-### Common Issues and Solutions
+### Docker Setup Issues
 
 #### Port Already in Use
-If you see "port 4000 already in use" or "port 4002 already in use":
 ```bash
-# Find what's using the port
-lsof -i :4000
-lsof -i :4002
-
+lsof -i :4000  # Check API port
+lsof -i :4002  # Check frontend port
 # Kill the process or change ports in docker-compose.dev.yml
-```
-
-#### Database Connection Errors
-If the API can't connect to the database:
-```bash
-# Check database container is running
-docker compose -f docker-compose.dev.yml ps
-
-# View database logs
-docker compose -f docker-compose.dev.yml logs postgres
-
-# Restart database
-docker compose -f docker-compose.dev.yml restart postgres
 ```
 
 #### Docker Not Starting
 ```bash
-# Make sure Docker Desktop is running
-docker --version
-
-# Clean up and restart
-docker compose -f docker-compose.dev.yml down -v
-docker compose -f docker-compose.dev.yml up -d
+docker --version  # Verify Docker is installed
+docker compose -f docker-compose.dev.yml down -v  # Clean up
+docker compose -f docker-compose.dev.yml up -d    # Fresh start
 ```
 
-#### Environment Variables Not Loading
+#### Database Connection Errors
 ```bash
-# Verify .env.docker exists and has correct values
-cat .env.docker
-
-# Make sure you're using --env-file flag
-docker compose -f docker-compose.dev.yml --env-file .env.docker up -d
+docker compose -f docker-compose.dev.yml logs postgres  # Check logs
+docker compose -f docker-compose.dev.yml restart postgres  # Restart DB
 ```
 
-#### Permission Denied (setup.sh)
-```bash
-# Make the setup script executable
-chmod +x setup.sh
-./setup.sh
-```
+**📖 For API errors, blockchain issues, and advanced troubleshooting, see [DOCUMENTATION.md - Troubleshooting](DOCUMENTATION.md#10-troubleshooting)**
 
 ### Getting Help
 - **GitHub Issues**: [Report bugs or request features](https://github.com/evidenceonline/ProofVault/issues)
-- **Documentation**: Check [DOCUMENTATION.md](DOCUMENTATION.md) for detailed guides
-- **Digital Evidence API**: Visit [digitalevidence.constellationnetwork.io](https://digitalevidence.constellationnetwork.io/)
+- **Complete Documentation**: [DOCUMENTATION.md](DOCUMENTATION.md)
+- **Digital Evidence API**: [digitalevidence.constellationnetwork.io](https://digitalevidence.constellationnetwork.io/)
 
 ---
 
 ## 📚 Documentation
 
-- **[Complete Documentation](DOCUMENTATION.md)** - Comprehensive system documentation including:
-  - Technical architecture and implementation
-  - Production deployment guide
-  - Legal framework and court admissibility
-  - API reference and usage instructions
-  - Blockchain integration details
-  - Advanced troubleshooting
+### When to Read DOCUMENTATION.md
 
-## 🔒 Security Model
+**👉 You should read [DOCUMENTATION.md](DOCUMENTATION.md) if you need:**
 
-### Cryptographic Protection
-- **SHA-256 Hashing**: Prevents content tampering (any change = different hash)
-- **Digital Signatures**: Cryptographic proof of document submitter
-- **Blockchain Immutability**: Hash cannot be altered once consensus reached
-- **Merkle Tree Structure**: Provides complete verification chain
+| Topic | Section |
+|-------|---------|
+| **Detailed architecture diagrams & data flows** | [System Architecture](DOCUMENTATION.md#2-system-architecture) |
+| **Production deployment checklist** | [Production Deployment Guide](DOCUMENTATION.md#4-production-deployment-guide) |
+| **Legal compliance & court admissibility** | [Legal Framework](DOCUMENTATION.md#5-legal-framework--court-admissibility) |
+| **API endpoints & integration examples** | [API Reference](DOCUMENTATION.md#7-api-reference) |
+| **Cryptographic standards & security details** | [Security Features](DOCUMENTATION.md#9-security-features) |
+| **Blockchain integration & status lifecycle** | [Blockchain Integration](DOCUMENTATION.md#6-blockchain-integration) |
+| **Advanced troubleshooting & diagnostics** | [Troubleshooting](DOCUMENTATION.md#10-troubleshooting) |
+| **Implementation for legal professionals** | [Legal Implementation](DOCUMENTATION.md#11-implementation-for-legal-professionals) |
 
-### Legal Standing
-- **Blockchain Timestamps**: Increasingly recognized in courts worldwide
-- **Cryptographic Hashes**: Provide forensic-level integrity proof  
-- **Digital Signatures**: Non-repudiation through mathematical proof
-- **Decentralized Verification**: No reliance on single trusted party
+**[📖 Read Complete Documentation →](DOCUMENTATION.md)**
+
+## 🔒 Security & Legal Compliance
+
+ProofVault uses military-grade cryptography (SHA-256 hashing, ECDSA signatures) and blockchain immutability to create tamper-proof legal evidence. The system is designed to meet Federal Rules of Evidence requirements for court admissibility.
+
+**📖 For detailed security features, cryptographic standards, legal framework, and court admissibility information, see [DOCUMENTATION.md - Security Features](DOCUMENTATION.md#9-security-features) and [Legal Framework](DOCUMENTATION.md#5-legal-framework--court-admissibility)**
 
 ## 🤝 Contributing
 

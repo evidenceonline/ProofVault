@@ -1,5 +1,16 @@
 # ProofVault Digital Evidence System - Complete Documentation
 
+## Quick Reference
+
+**Common Lookups:**
+- [System Architecture Diagram](#components-overview) | [Data Flow](#evidence-capture-and-verification-flow) | [Database Schema](#database-schema)
+- [Production Deployment](#4-production-deployment-guide) | [Environment Variables](#2-environment-variables) | [Verification Steps](#5-verification-steps)
+- [Court Admissibility](#federal-rules-of-evidence-compliance) | [Expert Testimony](#expert-testimony-points) | [Legal Use Cases](#legal-use-cases)
+- [API Endpoints](#evidence-upload) | [Integration Example](#api-integration-example) | [Status Check](#status-check)
+- [Troubleshooting](#10-troubleshooting) | [Diagnostic Commands](#diagnostic-commands) | [Success Indicators](#success-indicators)
+
+---
+
 ## Table of Contents
 
 1. [System Overview](#1-system-overview)
