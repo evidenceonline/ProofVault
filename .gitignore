@@ -44,4 +44,7 @@ temp/
 
 # Package locks (optional, depending on your preference)
 # package-lock.json
-# yarn.lock.env.docker
+# yarn.lock
+
+# Docker environment file (contains secrets)
+.env.docker

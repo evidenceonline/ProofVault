@@ -5,7 +5,7 @@ module.exports = {
       script: './api/server.js',
       watch: true,
       env: {
-        PORT: 3003,
+        PORT: 4000,
         NODE_ENV: 'production'
       },
       ignore_watch: ['node_modules', 'logs', '.git']
@@ -16,7 +16,7 @@ module.exports = {
       script: 'npm',
       args: 'start',
       env: {
-        PORT: 3002,
+        PORT: 4002,
         NODE_ENV: 'production'
       }
     },
