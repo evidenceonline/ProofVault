@@ -78,8 +78,8 @@ graph TB
     end
 
     %% Upload Flow
-    CE -->|1. Upload PDF<br/>(raw file)| API
-    API -->|2. Compute Hash<br/>(SHA-256)| API
+    CE -->|1. Upload PDF raw file| API
+    API -->|2. Compute SHA-256 Hash| API
     API -->|3. Store PDF + Hash| DB
     API -->|4. Submit Fingerprint| DE
     DE -->|5. Return Status| API
