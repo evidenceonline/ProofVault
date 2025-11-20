@@ -78,12 +78,13 @@ graph TB
     end
 
     %% Upload Flow
-    CE -->|1. Upload PDF| API
-    API -->|2. Store PDF & Hash| DB
-    API -->|3. Submit Fingerprint| DE
-    DE -->|4. Return Status| API
-    API -->|5. Update Record| DB
-    API -->|6. Return Success| CE
+    CE -->|1. Upload PDF<br/>(raw file)| API
+    API -->|2. Compute Hash<br/>(SHA-256)| API
+    API -->|3. Store PDF + Hash| DB
+    API -->|4. Submit Fingerprint| DE
+    DE -->|5. Return Status| API
+    API -->|6. Update Record| DB
+    API -->|7. Return Success| CE
 
     %% Verification Flow
     FE -->|A. Request Evidence| API
@@ -94,13 +95,14 @@ graph TB
 ### Core Components
 
 1. **Chrome Extension** (Evidence Capture)
-   - Captures web pages and generates PDFs
-   - Computes SHA-256 hashes for integrity verification
-   - Uploads evidence to API backend
+   - Captures web pages and generates PDFs locally using Chrome's print API
+   - Uploads raw PDF files to API backend (no client-side hashing)
+   - Provides user interface for evidence metadata input
 
 2. **API Backend** (Node.js/Express)
    - Receives evidence uploads from Chrome extension
-   - Stores evidence metadata in PostgreSQL database
+   - Computes SHA-256 hash of PDF content (server-side for security)
+   - Stores PDF binary data, hash, and metadata in PostgreSQL database
    - Integrates with Constellation Digital Evidence API
    - Provides status tracking and verification endpoints
 
@@ -140,13 +142,13 @@ graph TB
 #### 1. Evidence Capture (Chrome Extension)
 ```
 User visits webpage → Chrome Extension activated → Page converted to PDF →
-SHA-256 hash computed → Evidence uploaded to API
+Evidence uploaded to API (raw PDF file, no pre-hashing)
 ```
 
 #### 2. Backend Processing (API)
 ```
-Evidence received → Stored in database → Digital Evidence fingerprint created →
-ECDSA signature generated → Submitted to Constellation blockchain
+Evidence received → SHA-256 hash computed (server-side) → PDF + hash stored in database →
+Digital Evidence fingerprint created → ECDSA signature generated → Submitted to Constellation blockchain
 ```
 
 #### 3. Blockchain Verification
