@@ -126,7 +126,7 @@ graph TB
 #### Development Environment
 - **API Server**: http://localhost:4000
 - **Frontend Dashboard**: http://localhost:4002
-- **Database**: PostgreSQL on localhost:5432
+- **Database**: PostgreSQL on localhost:5433 (Docker) or localhost:5432 (native install)
 
 #### Production Environment
 - **API Server**: https://proofvault.net:4000
@@ -220,28 +220,37 @@ evidence_records (
 
 ## 4. Production Deployment Guide
 
-### Current Status Summary
+### Overview
 
-The Chrome extension Digital Evidence fingerprint issue has been **RESOLVED**. The local Digital Evidence integration is working perfectly and generates proper tamper-proof fingerprints. However, the production server at `proofvault.net:4000` needs to be updated to include the Digital Evidence integration.
+ProofVault can be deployed to production using either Docker (recommended) or native installation. This guide covers the essential requirements and configuration for production deployment.
 
-### Issue Analysis
+### Deployment Options
 
-#### Root Cause
-The Chrome extension was configured to call `proofvault.net:4000` in production, but that server was running the **original ProofVault API** without Digital Evidence integration. The Digital Evidence integration code exists in this repository (`proofvault-digital-evidence`) but was not deployed to production.
+#### Option 1: Docker Production Deployment (Recommended)
 
-#### Solution Status
-✅ **Local Integration Working**: Digital Evidence fingerprints are generated successfully on `localhost:4001`
-✅ **Chrome Extension Fixed**: Configuration switches between development and production
-✅ **API Response Fixed**: `blockchain_tx_id` field now included in upload response
-✅ **Tag Length Fixed**: Filename truncated to meet 32-character Digital Evidence API limit
+```bash
+# 1. Clone repository and checkout feature branch
+git clone https://github.com/evidenceonline/ProofVault.git
+cd ProofVault
+git checkout feature/automated-setup-and-improvements
 
-### Production Deployment Requirements
+# 2. Configure production environment
+cp .env.docker.example .env.docker
+# Edit .env.docker with production credentials
 
-#### 1. Deploy Updated API Code
+# 3. Deploy with production compose file
+docker compose -f docker-compose.yml up -d
+```
 
-**Target**: `proofvault.net:4000`
+#### Option 2: Native Production Deployment
 
-**Required Files**:
+Follow the native installation steps from the README, then configure the production environment variables as described below.
+
+### Production Configuration Requirements
+
+#### 1. Required Files
+
+**API Backend Files**:
 ```
 api/
 ├── controllers/pdfController.js     # Updated with Digital Evidence integration
@@ -294,14 +303,14 @@ Run `npm install` after deployment to install new dependencies.
 
 **Current Status**: Chrome extension has development/production switch
 
-**For Production Users**:
-- Set `DEVELOPMENT = false` in `config.js` (already set)
-- Extension will call `proofvault.net:4000`
-- Extension will redirect to `proofvault.net:4002` for web app
+**For Production**:
+- Set `DEVELOPMENT = false` in `chrome-extension/config.js`
+- Extension will call your production API URL (e.g., `https://your-domain.com/api`)
+- Extension will redirect to your production frontend URL
 
 **For Development/Testing**:
 - Set `DEVELOPMENT = true` in `config.js`
-- Extension will call `localhost:4001`
+- Extension will call `localhost:4000`
 - Extension will redirect to `localhost:4002` for web app
 
 #### 5. Verification Steps
@@ -310,11 +319,12 @@ After production deployment:
 
 1. **Test Health Endpoint**:
    ```bash
-   curl http://proofvault.net:4000/api/health
+   curl https://your-domain.com/api/health
    ```
 
 2. **Test Extension Upload**:
    - Install Chrome extension with `DEVELOPMENT = false`
+   - Configure extension to point to your production API
    - Capture evidence on any webpage
    - Verify fingerprint is generated (check `blockchain_tx_id` in response)
 
