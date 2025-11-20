@@ -221,15 +221,51 @@ If you prefer manual setup or need more control:
 ### System Flow
 ```mermaid
 graph TB
-    A[Chrome Extension] --> B[PDF Generation]
-    B --> C[SHA-256 Hashing]
-    C --> D[Backend API]
-    D --> E[Digital Evidence API]
-    E --> F[Constellation Network]
-    D --> G[PostgreSQL Database]
-    H[Frontend Dashboard] --> D
-    I[Blockchain Verification] --> F
+    A[Chrome Extension] -->|1. Upload PDF| B[Backend API]
+    B -->|2. Compute SHA-256 Hash| B
+    B -->|3. Store PDF + Hash| C[(PostgreSQL Database)]
+    B -->|4. Submit Fingerprint| D[Digital Evidence API]
+    D -->|5. Record on Blockchain| E[Constellation Network]
+    F[Frontend Dashboard] -->|View/Search| B
+    B -->|Read Records| C
+    F -->|Verify Status| B
+    B -->|Query Status| D
+
+    style A fill:#e1f5ff
+    style B fill:#fff4e1
+    style C fill:#f0f0f0
+    style D fill:#e8f5e9
+    style E fill:#f3e5f5
+    style F fill:#ffe0e0
 ```
+
+### How It Works
+
+**Upload Workflow (Chrome Extension → Blockchain):**
+1. **Chrome Extension** captures webpage and generates PDF locally using Chrome's print API
+2. **Backend API** receives the raw PDF file (extension does NOT compute hash)
+3. **Backend API** computes SHA-256 hash of the PDF content (server-side for security)
+4. **PostgreSQL Database** stores the PDF binary, hash, and metadata
+5. **Digital Evidence API** receives the hash as a fingerprint submission
+6. **Constellation Network** records the fingerprint on the blockchain with immutable timestamp
+
+**View Workflow (Frontend Dashboard → Data):**
+- **Frontend Dashboard** fetches records from Backend API (list, search, filter)
+- **Backend API** reads data from PostgreSQL Database
+- Users can view details, download PDFs, and verify blockchain status
+- **Note:** Frontend is view-only - no upload capability (uploads only via Chrome Extension)
+
+**Verification Workflow (Check Blockchain Status):**
+- User clicks "View Details" or "Verify" in Frontend Dashboard
+- **Backend API** queries Digital Evidence API for current fingerprint status
+- Status can be: PENDING, FINALIZED_COMMITMENT, or ERROR
+- Provides link to Constellation Network's Digital Evidence Explorer
+
+**Key Security Features:**
+- 🔒 Hash computation controlled by backend (prevents client-side tampering)
+- 🔒 Digital Evidence API submission is fail-safe (upload succeeds even if blockchain fails)
+- 🔒 Duplicate detection via hash comparison in database
+- 🔒 ECDSA signatures (secp256k1) for blockchain submissions
 
 ### Component Structure
 ```
